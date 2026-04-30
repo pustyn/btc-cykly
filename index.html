@@ -1,0 +1,1558 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#F7931A">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BTC Cykly">
+<meta name="description" content="Predikce 4letých Bitcoin cyklů — 1064/364 dní, Power Law model, halving countdown">
+
+<!-- PWA manifest -->
+<link rel="manifest" href="manifest.json">
+
+<!-- Ikony pro různá zařízení -->
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="256x256" href="icons/icon-256.png">
+<link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png">
+
+<title>BTC Cykly</title>
+<style>
+/* ====================  BASE  ==================== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg-0: #0a0a0f;
+  --bg-1: #0d0f18;
+  --bg-2: #111318;
+  --orange: #F7931A;
+  --orange-light: #FFB74D;
+  --green: #00E676;
+  --green-dark: #1B5E20;
+  --red: #FF1744;
+  --red-dark: #B71C1C;
+  --text: #e0e0e0;
+  --text-dim: #999;
+  --text-muted: #666;
+  --card-bg: rgba(255,255,255,0.04);
+  --card-border: rgba(255,255,255,0.08);
+  --font-ui: 'Outfit', 'Segoe UI Variable', 'Segoe UI', system-ui, -apple-system, Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Cascadia Mono', 'Consolas', monospace;
+  --font-size-base: 14px;
+}
+html { overflow-y: scroll; }
+body {
+  font-family: var(--font-ui);
+  font-size: var(--font-size-base);
+  background: linear-gradient(170deg, var(--bg-0) 0%, var(--bg-1) 40%, var(--bg-2) 100%);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 0 16px 40px;
+  position: relative;
+  overflow-x: hidden;
+  user-select: none;
+}
+body.theme-light {
+  --bg-0: #f7f7fa; --bg-1: #eef0f5; --bg-2: #e4e7ee;
+  --text: #1a1a1a; --text-dim: #555; --text-muted: #888;
+  --card-bg: rgba(0,0,0,0.04); --card-border: rgba(0,0,0,0.08);
+}
+body.theme-oled { --bg-0: #000; --bg-1: #000; --bg-2: #000; }
+body.size-large { --font-size-base: 16px; }
+body.size-xlarge { --font-size-base: 18px; }
+
+/* ====================  ANIMATIONS  ==================== */
+@keyframes rise {
+  0%   { transform: translateY(110vh) translateX(0) rotate(0deg) scale(0.7); opacity: 0; }
+  10%  { opacity: var(--op, 0.3); }
+  50%  { transform: translateY(55vh) translateX(calc(var(--drift, 30px) * 0.5)) rotate(calc(var(--rot, 20deg) * 0.5)) scale(1); }
+  90%  { opacity: calc(var(--op, 0.3) * 0.7); }
+  100% { transform: translateY(-10vh) translateX(var(--drift, 30px)) rotate(var(--rot, 20deg)) scale(1.2); opacity: 0; }
+}
+@keyframes fadeSlideIn { from {opacity:0; transform:translateX(-20px);} to {opacity:1; transform:translateX(0);} }
+@keyframes pulse { 0%,100% {transform:scale(1);} 50% {transform:scale(1.4);} }
+@keyframes shimmer { 0% {background-position:-200% 0;} 100% {background-position:200% 0;} }
+@keyframes rotIn { from {transform: rotate(-5deg) scale(0.95); opacity:0;} to {transform: rotate(0) scale(1); opacity:1;} }
+
+/* ====================  PARTICLES - padající BTC  ==================== */
+.snow { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.flake {
+  position: absolute; top: 0;
+  color: var(--orange);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  animation: rise linear infinite;
+  filter: drop-shadow(0 0 6px rgba(247,147,26,0.4));
+  will-change: transform, opacity;
+}
+
+/* ====================  LAYOUT  ==================== */
+.content { position: relative; z-index: 1; max-width: 820px; margin: 0 auto; }
+
+/* Header */
+header { text-align: center; padding: 22px 0 10px; }
+.logo-row { display: flex; align-items: center; justify-content: center; gap: 14px; }
+.btc-icon {
+  width: 46px; height: 46px; border-radius: 14px;
+  background: linear-gradient(135deg, var(--orange), var(--orange-light));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 25px; font-weight: 800; color: #fff;
+  font-family: var(--font-mono);
+  box-shadow: 0 4px 24px rgba(247,147,26,0.3); flex-shrink: 0;
+}
+h1 {
+  font-size: 24px; font-weight: 800;
+  background: linear-gradient(90deg, var(--orange), #FFD54F, var(--orange));
+  background-size: 200% 100%;
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text; color: transparent;
+  animation: shimmer 4s linear infinite;
+}
+.subtitle { font-size: 12px; color: var(--text-dim); margin-top: 2px; font-weight: 300; letter-spacing: 0.5px; }
+
+/* Tabs */
+.tabs {
+  display: flex; gap: 4px; margin: 14px auto 0; max-width: 560px;
+  background: var(--card-bg); border: 1px solid var(--card-border);
+  border-radius: 12px; padding: 4px;
+}
+.tab {
+  flex: 1; padding: 8px 10px; border-radius: 9px;
+  background: transparent; border: none; color: var(--text-dim);
+  font-family: var(--font-ui); font-size: 12px; font-weight: 600;
+  cursor: pointer; text-transform: uppercase; letter-spacing: 1px;
+  transition: all 0.25s; display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.tab:hover { color: var(--text); }
+.tab.active {
+  background: linear-gradient(135deg, var(--orange), var(--orange-light));
+  color: #000; box-shadow: 0 2px 12px rgba(247,147,26,0.3);
+}
+.tab-icon { font-size: 14px; }
+
+/* Panels */
+.panel { display: none; animation: fadeSlideIn 0.4s ease; }
+.panel.active { display: block; }
+
+/* Cards shared */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 16px; padding: 16px 18px;
+  margin: 12px 0; backdrop-filter: blur(10px);
+}
+
+/* Phase card */
+.phase-card .phase-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.phase-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite; flex-shrink: 0;
+}
+.phase-dot.bull { background: var(--green); box-shadow: 0 0 20px rgba(0,230,118,0.5); }
+.phase-dot.bear { background: var(--red); box-shadow: 0 0 20px rgba(255,23,68,0.5); }
+.phase-label { font-size: 17px; font-weight: 700; letter-spacing: 1.5px; }
+.phase-sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+.phase-percent { margin-left: auto; font-size: 30px; font-weight: 800; font-family: var(--font-mono); color: var(--orange); }
+.progress-track { height: 8px; border-radius: 4px; background: rgba(255,255,255,0.08); overflow: hidden; position: relative; }
+.progress-fill { height: 100%; width: 0; border-radius: 4px; transition: width 0.6s ease; display: block; }
+.progress-fill.bull { background: linear-gradient(90deg, var(--green), #69F0AE); }
+.progress-fill.bear { background: linear-gradient(90deg, var(--red), #FF5252); }
+.progress-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+
+/* Countdown */
+.countdown-row {
+  display: flex; justify-content: center; gap: 12px;
+  margin-top: 14px; padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.countdown-item { text-align: center; min-width: 54px; }
+.countdown-num { font-size: 24px; font-weight: 800; font-family: var(--font-mono); color: var(--orange); }
+.countdown-label { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+
+/* Settings quick */
+.settings-quick {
+  display: flex; gap: 16px; justify-content: center; align-items: flex-end;
+  margin: 16px auto; flex-wrap: wrap;
+}
+.setting { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.setting label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+.date-input, .num-input, select.inp {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px; padding: 8px 14px; color: var(--text);
+  font-family: var(--font-mono); font-size: 13px;
+  outline: none; text-align: center;
+  transition: border-color 0.2s;
+}
+.date-input:focus, .num-input:focus, select.inp:focus { border-color: var(--orange); }
+.counter-row { display: flex; align-items: center; gap: 10px; }
+.counter-btn {
+  width: 34px; height: 34px; border-radius: 9px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06); color: var(--text);
+  font-size: 18px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.counter-btn:hover { background: rgba(247,147,26,0.2); border-color: var(--orange); }
+.counter-val { font-size: 16px; font-weight: 700; font-family: var(--font-mono); color: var(--orange); min-width: 28px; text-align: center; }
+
+/* Section title */
+.section-title { font-size: 14px; font-weight: 700; color: var(--orange); margin: 22px 0 12px; text-transform: uppercase; letter-spacing: 2px; }
+
+/* Timeline */
+.timeline { display: flex; flex-direction: column; gap: 6px; width: 100%; box-sizing: border-box; }
+.tl-item { cursor: pointer; transition: all 0.2s; padding: 2px 0; width: 100%; box-sizing: border-box; }
+.tl-label-row { display: flex; justify-content: space-between; margin-bottom: 3px; }
+.tl-cycle-label { font-size: 12px; font-weight: 700; font-family: var(--font-mono); color: var(--text-dim); }
+.tl-cycle-label.active { color: var(--orange); }
+.tl-year { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
+.tl-bar { width: 100%; height: 30px; border-radius: 6px; overflow: hidden; position: relative; box-sizing: border-box; background: rgba(255,255,255,0.04); }
+.bull-bar { position: absolute; top: 0; bottom: 0; left: 0; width: 0; background: linear-gradient(90deg, #1B5E20, #2E7D32, #43A047); transition: opacity 0.3s, width 0.3s; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.bear-bar { position: absolute; top: 0; bottom: 0; left: 0; width: 0; background: linear-gradient(90deg, #B71C1C, #C62828, #D32F2F); transition: opacity 0.3s, width 0.3s, left 0.3s; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.bar-text { font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.85); font-family: var(--font-mono); white-space: nowrap; }
+.now-marker { position: absolute; top: -6px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; z-index: 2; }
+.now-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--orange); border: 2px solid #fff; box-shadow: 0 0 12px rgba(247,147,26,0.6); }
+.now-text { font-size: 8px; font-weight: 800; color: var(--orange); margin-top: 1px; letter-spacing: 1px; }
+
+.detail-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  max-height: 0; overflow: hidden; opacity: 0;
+  transition: max-height 0.4s ease, opacity 0.3s ease, padding 0.3s ease, margin 0.3s ease;
+  padding: 0 16px;
+}
+.detail-card.open { max-height: 240px; opacity: 1; padding: 14px 16px; margin: 6px 0; }
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.detail-item { display: flex; align-items: center; gap: 10px; }
+.detail-icon { font-size: 18px; }
+.detail-label { font-size: 11px; color: var(--text-dim); letter-spacing: 0.5px; }
+.detail-value { font-size: 13px; font-weight: 700; color: var(--text); margin-top: 2px; }
+.detail-value.orange { color: var(--orange); }
+
+/* Table */
+.table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--card-border); }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th { padding: 10px 12px; text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--orange); background: rgba(247,147,26,0.08); border-bottom: 1px solid var(--card-border); font-family: var(--font-mono); white-space: nowrap; }
+td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
+tr.active-row { background: rgba(247,147,26,0.15) !important; }
+tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+.td-label { font-weight: 700; color: var(--text); }
+.td-green { color: #69F0AE; }
+.td-orange { color: var(--orange); font-weight: 700; }
+.td-red { color: #FF5252; }
+.active-tag { font-size: 8px; font-weight: 800; background: linear-gradient(90deg, var(--orange), var(--orange-light)); color: #000; padding: 2px 5px; border-radius: 4px; letter-spacing: 1px; margin-left: 6px; display: inline-block; vertical-align: middle; }
+
+/* Info grid */
+.info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 20px 0; }
+.info-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 16px; display: flex; gap: 12px; }
+.info-card .icon { font-size: 26px; flex-shrink: 0; }
+.info-card h3 { font-size: 13px; font-weight: 700; color: var(--orange); margin-bottom: 4px; }
+.info-card p { font-size: 12px; color: var(--text-dim); line-height: 1.5; }
+
+/* Power Law */
+.pl-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 14px 0; }
+.kpi { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 12px 14px; }
+.kpi-label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+.kpi-value { font-size: 19px; font-weight: 800; font-family: var(--font-mono); color: var(--orange); margin-top: 4px; }
+.kpi-value.green { color: var(--green); }
+.kpi-value.red { color: var(--red); }
+.pl-chart-wrap { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 12px; margin-top: 8px; position: relative; }
+.pl-chart { width: 100%; height: 320px; display: block; cursor: crosshair; touch-action: none; }
+.pl-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 11px; color: var(--text-dim); margin-top: 8px; justify-content: center; }
+
+/* Power Law controls */
+.pl-controls {
+  display: grid;
+  grid-template-columns: auto 1fr 1fr;
+  gap: 14px; align-items: center;
+  background: var(--card-bg); border: 1px solid var(--card-border);
+  border-radius: 12px; padding: 12px 14px; margin: 12px 0 8px;
+}
+.pl-ctrl { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.pl-ctrl .pl-ctrl-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.pl-ctrl label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+.pl-ctrl .pl-val { font-size: 12px; color: var(--orange); font-family: var(--font-mono); font-weight: 700; }
+.pl-ctrl input[type="range"] {
+  width: 100%; -webkit-appearance: none; appearance: none; height: 6px;
+  background: rgba(255,255,255,0.1); border-radius: 3px; outline: none;
+}
+.pl-ctrl input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 16px; height: 16px;
+  background: var(--orange); border-radius: 50%; cursor: pointer;
+  box-shadow: 0 0 8px rgba(247,147,26,0.5);
+}
+.pl-ctrl input[type="range"]::-moz-range-thumb {
+  width: 16px; height: 16px; background: var(--orange); border-radius: 50%;
+  cursor: pointer; border: none; box-shadow: 0 0 8px rgba(247,147,26,0.5);
+}
+@media (max-width: 560px) {
+  .pl-controls { grid-template-columns: 1fr; }
+}
+
+/* Hover tooltip for chart */
+.pl-tooltip {
+  position: absolute; pointer-events: none;
+  background: rgba(0,0,0,0.92); border: 1px solid var(--orange);
+  border-radius: 8px; padding: 8px 12px;
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--text); opacity: 0; transition: opacity 0.15s;
+  z-index: 10; min-width: 160px;
+}
+.pl-tooltip.show { opacity: 1; }
+.pl-tooltip .tt-date { color: var(--orange); font-weight: 700; margin-bottom: 4px; font-size: 12px; }
+.pl-tooltip .tt-row { display: flex; justify-content: space-between; gap: 10px; padding: 1px 0; }
+.pl-tooltip .tt-label { color: var(--text-dim); }
+.pl-tooltip .tt-val { color: var(--text); font-weight: 600; }
+.pl-tooltip .tt-val.green { color: #69F0AE; }
+.pl-tooltip .tt-val.red { color: #FF5252; }
+.pl-tooltip .tt-val.orange { color: var(--orange); }
+.pl-legend span::before { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+.pl-legend .l-fair::before { background: var(--orange); }
+.pl-legend .l-sup::before { background: #4CAF50; }
+.pl-legend .l-res::before { background: #FF5252; }
+.pl-legend .l-now::before { background: #fff; }
+
+/* Halving */
+.hv-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+@media(min-width: 560px){ .hv-grid { grid-template-columns: 1fr 1fr; } }
+.halv-big { font-size: 48px; font-weight: 800; font-family: var(--font-mono); color: var(--orange); text-align: center; }
+.halv-label { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--text-dim); text-align: center; margin-top: 4px; }
+
+/* Settings */
+.settings-group { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; padding: 14px 16px; margin-bottom: 12px; }
+.settings-group h4 { font-size: 11px; color: var(--orange); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; }
+.sg-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; gap: 12px; flex-wrap: wrap; }
+.sg-row + .sg-row { border-top: 1px solid rgba(255,255,255,0.04); }
+.sg-label { font-size: 13px; }
+.sg-desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.toggle { position: relative; width: 44px; height: 24px; background: rgba(255,255,255,0.1); border-radius: 12px; cursor: pointer; transition: background 0.2s; flex-shrink: 0; }
+.toggle::after { content: ''; position: absolute; width: 18px; height: 18px; border-radius: 50%; background: #fff; top: 3px; left: 3px; transition: transform 0.2s; }
+.toggle.on { background: var(--orange); }
+.toggle.on::after { transform: translateX(20px); }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 8px 14px; border-radius: 9px; border: 1px solid var(--card-border);
+  background: rgba(255,255,255,0.06); color: var(--text);
+  font-family: var(--font-ui); font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: all 0.2s; text-decoration: none;
+}
+.btn:hover { background: rgba(247,147,26,0.15); border-color: var(--orange); color: var(--orange); }
+.btn.primary { background: linear-gradient(135deg, var(--orange), var(--orange-light)); color: #000; border: none; }
+.btn.primary:hover { filter: brightness(1.1); color: #000; }
+
+/* Tooltip */
+[data-tip] { position: relative; }
+[data-tip]::after {
+  content: attr(data-tip); position: absolute; bottom: 125%; left: 50%;
+  transform: translateX(-50%); background: #000; color: #fff;
+  padding: 6px 10px; border-radius: 6px; font-size: 11px; white-space: nowrap;
+  opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  z-index: 10; max-width: 240px; white-space: normal; text-align: center; width: max-content;
+}
+[data-tip]:hover::after { opacity: 1; }
+
+footer { text-align: center; padding: 18px 0; font-size: 10px; color: var(--text-muted); border-top: 1px solid rgba(255,255,255,0.05); margin-top: 20px; line-height: 1.6; }
+
+.link-ext { color: var(--orange); text-decoration: none; border-bottom: 1px dashed rgba(247,147,26,0.4); }
+.link-ext:hover { border-bottom-color: var(--orange); }
+
+/* Mini cycle-compare chart */
+
+/* ====================  MOBILE RESPONSIVE  ==================== */
+@media (max-width: 600px) {
+  body { font-size: 14px; }
+  .container { padding: 10px 8px !important; max-width: 100% !important; }
+  .header { padding: 12px !important; }
+  .header h1, .app-title { font-size: 22px !important; }
+  .tabs { flex-wrap: wrap; gap: 6px !important; }
+  .tab { font-size: 11px !important; padding: 8px 10px !important; }
+  .card { padding: 12px !important; border-radius: 10px !important; }
+  .countdown-numbers { gap: 8px !important; flex-wrap: wrap; justify-content: center; }
+  .countdown-numbers > div { min-width: 48px; }
+  .big-num { font-size: 28px !important; }
+  .small-label { font-size: 10px !important; }
+  /* Tabulka prehled cyklu - horizontalni scroll */
+  .table-wrap, table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { min-width: 540px; font-size: 11px; }
+  th, td { padding: 6px 8px !important; }
+  /* Power Law SVG sirka */
+  #plChart, #plSvg { max-width: 100%; height: auto; }
+  /* Settings panel */
+  .setting-row { flex-direction: column; align-items: flex-start !important; gap: 4px; }
+  .setting-row input, .setting-row select { width: 100%; }
+  /* Halving countdown */
+  .halving-grid { grid-template-columns: 1fr 1fr !important; }
+  /* Timeline label row fits */
+  .tl-label-row { flex-wrap: wrap; gap: 4px; }
+  .tl-year { font-size: 10px !important; }
+  /* Touch targets - minimalne 40px */
+  button, .tab, .qty-btn { min-height: 40px; }
+  /* Snow vypneme na mobilu - setri baterii */
+  .snow { display: none !important; }
+}
+
+/* iOS safe area pro notch */
+@supports (padding: max(0px)) {
+  body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+  .container { padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+}
+
+/* Vypnout zoom na double-tap (Android Chrome) */
+* { touch-action: manipulation; }
+
+/* PWA standalone mode - skryt browser UI */
+@media (display-mode: standalone) {
+  body { user-select: none; -webkit-user-select: none; }
+}
+
+</style>
+</head>
+<body>
+
+<div class="snow" id="snow"></div>
+
+<div class="content">
+
+  <header>
+    <div class="logo-row">
+      <div class="btc-icon">B</div>
+      <div>
+        <h1>BTC Cykly</h1>
+        <div class="subtitle">Predikce 4letých cyklů · 1064/364 dní · Power Law</div>
+      </div>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-panel="cycle"><span class="tab-icon">🔄</span>Cyklus</button>
+      <button class="tab" data-panel="powerlaw"><span class="tab-icon">📐</span>Power Law</button>
+      <button class="tab" data-panel="halving"><span class="tab-icon">⛏️</span>Halving</button>
+      <button class="tab" data-panel="settings"><span class="tab-icon">⚙️</span>Nastavení</button>
+    </div>
+  </header>
+
+  <!-- ============= CYCLE ============= -->
+  <section class="panel active" id="panel-cycle">
+    <div id="phaseCard"></div>
+
+    <div class="settings-quick">
+      <div class="setting">
+        <label data-tip="Datum posledního ATH (All-Time High). Od něj se počítá aktuální cyklus.">Datum ATH</label>
+        <input type="date" id="athInput" value="2025-10-06" class="date-input">
+      </div>
+      <div class="setting">
+        <label data-tip="Kolik budoucích cyklů zobrazit na časové ose">Počet cyklů</label>
+        <div class="counter-row">
+          <button class="counter-btn" id="decBtn">−</button>
+          <span class="counter-val" id="countVal">10</span>
+          <button class="counter-btn" id="incBtn">+</button>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="section-title">Vizuální časová osa</h2>
+    <div class="timeline" id="timeline"></div>
+
+    <h2 class="section-title">Přehled všech cyklů</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Cyklus</th><th>Začátek býka</th><th>ATH</th><th>Konec medvěda</th><th>Odhad ATH ceny</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+
+    <h2 class="section-title">Jak funguje 4letý cyklus</h2>
+    <div class="info-grid">
+      <div class="info-card">
+        <div class="icon">⚙️</div>
+        <div>
+          <h3>Halving</h3>
+          <p>Každé ~4 roky se odměna těžařů sníží na polovinu. To vytváří nabídkový šok — hlavní motor cyklu.</p>
+        </div>
+      </div>
+      <div class="info-card">
+        <div class="icon">🧠</div>
+        <div>
+          <h3>Psychologie</h3>
+          <p>Euforie → chamtivost → panika → kapitulace → akumulace. Lidské emoce zesilují cyklus.</p>
+        </div>
+      </div>
+      <div class="info-card">
+        <div class="icon">🔮</div>
+        <div>
+          <h3>Samonaplnění</h3>
+          <p>Čím více lidí cyklus zná, tím víc se podle něj chovají — částečně samonaplňující se proroctví.</p>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ============= POWER LAW ============= -->
+  <section class="panel" id="panel-powerlaw">
+    <div class="card">
+      <h3 style="color:var(--orange);font-size:15px;margin-bottom:6px;">📐 Bitcoin Power Law Model</h3>
+      <p style="color:var(--text-dim);font-size:12px;line-height:1.6;">
+        Matematický model (Giovanni Santostasi) popisuje cenu BTC jako mocninnou funkci času od genesis bloku.
+        Parametry aktualizované dle live fit (charts.bitbo.io):
+        <br><code style="color:var(--orange);font-family:var(--font-mono);">Price = 10<sup>−16.92</sup> × (dny od 3.1.2009)<sup>5.82</sup></code>
+        <br><span style="font-size:11px;opacity:0.8;">Support ≈ fair × 0.355 (dno koridoru) · Resistance ≈ fair × 3.54 (top koridoru)</span>
+      </p>
+    </div>
+
+    <div class="pl-kpis">
+      <div class="kpi"><div class="kpi-label">Dnes Fair Value</div><div class="kpi-value" id="plFair">—</div></div>
+      <div class="kpi"><div class="kpi-label">Support (dno)</div><div class="kpi-value green" id="plSup">—</div></div>
+      <div class="kpi"><div class="kpi-label">Resistance (top)</div><div class="kpi-value red" id="plRes">—</div></div>
+      <div class="kpi"><div class="kpi-label">Aktuální BTC cena</div><div class="kpi-value" id="plNow">—</div></div>
+      <div class="kpi"><div class="kpi-label">Odchylka od fair</div><div class="kpi-value" id="plDiff">—</div></div>
+    </div>
+
+    <div class="pl-controls">
+      <button class="btn primary" id="plTodayBtn" data-tip="Vrátit pohled na dnešní datum">📍 Dnes</button>
+      <div class="pl-ctrl">
+        <div class="pl-ctrl-header">
+          <label>Posun v čase</label>
+          <span class="pl-val" id="plCenterLabel">—</span>
+        </div>
+        <input type="range" id="plCenterSlider" min="2010" max="2045" value="2026" step="1">
+      </div>
+      <div class="pl-ctrl">
+        <div class="pl-ctrl-header">
+          <label>Rozsah zobrazení</label>
+          <span class="pl-val" id="plZoomLabel">—</span>
+        </div>
+        <input type="range" id="plZoomSlider" min="4" max="30" value="20" step="1">
+      </div>
+    </div>
+
+    <div class="pl-chart-wrap" id="plChartWrap">
+      <svg class="pl-chart" id="plChart" viewBox="0 0 800 320" preserveAspectRatio="none"></svg>
+      <div class="pl-tooltip" id="plTooltip">
+        <div class="tt-date">—</div>
+        <div class="tt-row"><span class="tt-label">Fair value:</span><span class="tt-val orange" id="ttFair">—</span></div>
+        <div class="tt-row"><span class="tt-label">Support:</span><span class="tt-val green" id="ttSup">—</span></div>
+        <div class="tt-row"><span class="tt-label">Resistance:</span><span class="tt-val red" id="ttRes">—</span></div>
+        <div class="tt-row" id="ttNowRow" style="border-top:1px solid rgba(255,255,255,0.1);margin-top:4px;padding-top:4px;"><span class="tt-label">Aktuální:</span><span class="tt-val" id="ttNow">—</span></div>
+      </div>
+      <div class="pl-legend">
+        <span class="l-fair">Fair value</span>
+        <span class="l-sup">Support (0.355×)</span>
+        <span class="l-res">Resistance (3.54×)</span>
+        <span class="l-now">Dnes</span>
+      </div>
+      <div style="text-align:center;font-size:10px;color:var(--text-muted);margin-top:6px;">
+        💡 Najeď myší na graf pro detail · Posuvníky mění zobrazovaný úsek · Kolečko myši = zoom
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <h3 style="color:var(--orange);font-size:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:10px;">🔗 Zdroje & reference</h3>
+      <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;">
+        <a class="link-ext" href="https://bitcoinpowerlaw.com" target="_blank" rel="noopener">bitcoinpowerlaw.com — Giovanni Santostasi (oficiální model)</a>
+        <a class="link-ext" href="https://charts.bitbo.io/power-law/" target="_blank" rel="noopener">charts.bitbo.io/power-law — interaktivní graf</a>
+        <a class="link-ext" href="https://www.btcpowerlaw.com" target="_blank" rel="noopener">btcpowerlaw.com — HC Burger verze</a>
+        <a class="link-ext" href="https://en.wikipedia.org/wiki/Power_law" target="_blank" rel="noopener">Power Law — Wikipedie (obecně)</a>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px;background:rgba(247,147,26,0.04);border-color:rgba(247,147,26,0.2);">
+      <p style="font-size:12px;color:var(--text-dim);line-height:1.6;">
+        ⚠️ <strong>Orientační model.</strong> Power Law není zákon přírody, je to statistická aproximace historických dat.
+        Nehodí se pro krátkodobé predikce. Budoucnost se může odchýlit. Není to finanční poradenství.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============= HALVING ============= -->
+  <section class="panel" id="panel-halving">
+    <div class="card">
+      <h3 style="color:var(--orange);font-size:15px;margin-bottom:12px;">⛏️ Odpočet do příštího halvingu</h3>
+      <div class="hv-grid">
+        <div>
+          <div class="halv-big" id="halvDays">—</div>
+          <div class="halv-label">Dní do dalšího halvingu</div>
+        </div>
+        <div>
+          <div class="halv-big" id="halvBlocks">—</div>
+          <div class="halv-label">Odhad bloků zbývá</div>
+        </div>
+      </div>
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.06);text-align:center;">
+        <div style="font-size:13px;">Předpokládané datum: <strong id="halvDate" style="color:var(--orange);font-family:var(--font-mono);">—</strong></div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Odměna klesne: <span id="halvFrom">—</span> → <span id="halvTo" style="color:var(--orange);">—</span> BTC</div>
+      </div>
+    </div>
+
+    <h2 class="section-title">Historie halvingů</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>#</th><th>Datum</th><th>Blok</th><th>Odměna</th><th>BTC cena tehdy</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="td-label">1</td><td>28.11.2012</td><td class="td-orange">210 000</td><td>50 → 25</td><td class="td-green">~$12</td></tr>
+          <tr><td class="td-label">2</td><td>9.7.2016</td><td class="td-orange">420 000</td><td>25 → 12.5</td><td class="td-green">~$650</td></tr>
+          <tr><td class="td-label">3</td><td>11.5.2020</td><td class="td-orange">630 000</td><td>12.5 → 6.25</td><td class="td-green">~$8 600</td></tr>
+          <tr><td class="td-label">4</td><td>20.4.2024</td><td class="td-orange">840 000</td><td>6.25 → 3.125</td><td class="td-green">~$64 000</td></tr>
+          <tr class="active-row"><td class="td-label">5<span class="active-tag">PŘÍŠTÍ</span></td><td id="h5date">~2028</td><td class="td-orange">1 050 000</td><td>3.125 → 1.5625</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="info-grid" style="margin-top:16px;">
+      <div class="info-card">
+        <div class="icon">📉</div>
+        <div>
+          <h3>Nabídkový šok</h3>
+          <p>Po halvingu vzniká méně nových BTC. Pokud poptávka zůstane stejná → cena roste.</p>
+        </div>
+      </div>
+      <div class="info-card">
+        <div class="icon">⏱️</div>
+        <div>
+          <h3>Perioda ~4 roky</h3>
+          <p>Přesně 210 000 bloků. Při ~10 min/blok = cca 4 roky mezi halvingy.</p>
+        </div>
+      </div>
+      <div class="info-card">
+        <div class="icon">🎯</div>
+        <div>
+          <h3>Cap 21M</h3>
+          <p>Díky halvingům bude celkem nikdy více než 21 milionů BTC. Poslední kolem roku 2140.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============= SETTINGS ============= -->
+  <section class="panel" id="panel-settings">
+    <div class="settings-group">
+      <h4>🔄 Délka cyklu</h4>
+      <div class="sg-row">
+        <div>
+          <div class="sg-label">Preset</div>
+          <div class="sg-desc">Rychlá změna délek cyklu</div>
+        </div>
+        <select id="presetSel" class="inp">
+          <option value="custom">Vlastní</option>
+          <option value="classic" selected>Klasický (1064 / 364)</option>
+          <option value="conservative">Konzervativní (1200 / 460)</option>
+          <option value="aggressive">Agresivní (950 / 300)</option>
+          <option value="halving">Halving-aligned (1260 / 200)</option>
+        </select>
+      </div>
+      <div class="sg-row">
+        <div>
+          <div class="sg-label">Bull fáze (dní)</div>
+          <div class="sg-desc">Délka býčího trhu od začátku do ATH</div>
+        </div>
+        <input type="number" id="bullInp" min="500" max="2000" value="1064" class="num-input" style="width:110px;">
+      </div>
+      <div class="sg-row">
+        <div>
+          <div class="sg-label">Bear fáze (dní)</div>
+          <div class="sg-desc">Délka medvěda od ATH do dna</div>
+        </div>
+        <input type="number" id="bearInp" min="100" max="1000" value="364" class="num-input" style="width:110px;">
+      </div>
+      <div class="sg-row">
+        <div>
+          <div class="sg-label">Celkem cyklus</div>
+          <div class="sg-desc">Bull + Bear</div>
+        </div>
+        <span id="totalCycle" style="font-family:var(--font-mono);color:var(--orange);font-size:16px;font-weight:700;">1428 dní</span>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <h4>🎨 Vzhled</h4>
+      <div class="sg-row">
+        <div>
+          <div class="sg-label">Téma</div>
+          <div class="sg-desc">Dark / Light / OLED Black</div>
+        </div>
+        <select id="themeSel" class="inp">
+          <option value="dark" selected>Dark</option>
+          <option value="light">Light</option>
+          <option value="oled">OLED Black</option>
+        </select>
+      </div>
+      <div class="sg-row">
+        <div>
+          <div class="sg-label">Velikost písma</div>
+          <div class="sg-desc">Pro lepší čitelnost</div>
+        </div>
+        <select id="sizeSel" class="inp">
+          <option value="normal" selected>Normální</option>
+          <option value="large">Velké (+14%)</option>
+          <option value="xlarge">XL (+28%)</option>
+        </select>
+      </div>
+      <div class="sg-row">
+        <div>
+          <div class="sg-label">Padající ₿ animace</div>
+          <div class="sg-desc">Dekorativní symboly na pozadí</div>
+        </div>
+        <div class="toggle on" id="snowToggle"></div>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <h4>🔔 Notifikace & Tray</h4>
+      <div class="sg-row">
+        <div>
+          <div class="sg-label">Notifikace při změně fáze</div>
+          <div class="sg-desc">Bull → Bear a naopak</div>
+        </div>
+        <div class="toggle on" id="notifToggle"></div>
+      </div>
+      <div class="sg-row">
+        <div>
+          <div class="sg-label">Režim „Nerušit" (22:00 – 7:00)</div>
+          <div class="sg-desc">V noci žádné notifikace</div>
+        </div>
+        <div class="toggle on" id="dndToggle"></div>
+      </div>
+      <div class="sg-row">
+        <div>
+          <div class="sg-label">Zavřít do tray ikony (místo ukončit)</div>
+          <div class="sg-desc">Křížek okna minimalizuje do tray</div>
+        </div>
+        <div class="toggle on" id="trayToggle"></div>
+      </div>
+      <div class="sg-row">
+        <div>
+          <div class="sg-label">Spouštět s Windows</div>
+          <div class="sg-desc">Automatický start po přihlášení</div>
+        </div>
+        <div class="toggle" id="autostartToggle"></div>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <h4>🔗 Rychlé odkazy</h4>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:8px;">
+        <a class="btn" href="https://mempool.space" target="_blank" rel="noopener">🌐 Mempool.space</a>
+        <a class="btn" href="https://www.coingecko.com/en/coins/bitcoin" target="_blank" rel="noopener">💹 CoinGecko BTC</a>
+        <a class="btn" href="https://www.tradingview.com/symbols/BTCUSD/" target="_blank" rel="noopener">📈 TradingView</a>
+        <a class="btn" href="https://bitcoinpowerlaw.com" target="_blank" rel="noopener">📐 Power Law</a>
+        <a class="btn" href="https://bitbo.io" target="_blank" rel="noopener">🧡 Bitbo charts</a>
+        <a class="btn" href="https://clarkmoody.com/dashboard/" target="_blank" rel="noopener">📊 Clark Moody</a>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <h4>ℹ️ Aplikace</h4>
+      <div class="sg-row"><span>Verze</span><span style="font-family:var(--font-mono);color:var(--orange);">1.0.0</span></div>
+      <div class="sg-row"><span>Build</span><span style="font-family:var(--font-mono);color:var(--text-dim);" id="buildDate">—</span></div>
+      <div class="sg-row" style="flex-direction:column;align-items:flex-start;gap:8px;">
+        <span class="sg-label">Klávesové zkratky</span>
+        <div style="font-size:11px;color:var(--text-dim);font-family:var(--font-mono);line-height:1.8;">
+          <kbd>F5</kbd> — obnovit &nbsp; <kbd>Ctrl+,</kbd> — nastavení &nbsp; <kbd>Ctrl+1..4</kbd> — záložky<br>
+          <kbd>Esc</kbd> — minimalizovat do tray &nbsp; <kbd>Ctrl+Q</kbd> — ukončit
+        </div>
+      </div>
+      <div class="sg-row" style="justify-content:center;gap:10px;">
+        <button class="btn" id="resetBtn">↻ Reset nastavení</button>
+        <button class="btn" id="exportBtn">💾 Export konfigurace</button>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>BTC Cykly · Orientační model · Nejde o finanční poradenství</p>
+    <p>Data jsou přibližné průměry z historických cyklů · Power Law dle G. Santostasi</p>
+  </footer>
+</div>
+
+<script>
+// ========================= TAURI DETECT =========================
+const IS_TAURI = typeof window.__TAURI__ !== 'undefined' || typeof window.__TAURI_INTERNALS__ !== 'undefined';
+const invoke = (IS_TAURI && window.__TAURI__ && window.__TAURI__.core) ? window.__TAURI__.core.invoke
+             : (IS_TAURI && window.__TAURI_INTERNALS__) ? window.__TAURI_INTERNALS__.invoke
+             : null;
+
+async function tauri(cmd, args) {
+  if (!invoke) return null;
+  try { return await invoke(cmd, args || {}); } catch (e) { console.warn('tauri', cmd, e); return null; }
+}
+
+// ========================= STATE =========================
+const DEFAULTS = {
+  ath: '2025-10-06',
+  cycleCount: 10,
+  bull: 1064,
+  bear: 364,
+  theme: 'dark',
+  size: 'normal',
+  snow: true,
+  notif: true,
+  dnd: true,
+  tray: true,
+  autostart: false,
+};
+let S = { ...DEFAULTS };
+let selectedCycle = null;
+let lastPhaseKey = null;
+
+// BTC genesis block: 3.1.2009 18:15 UTC
+const GENESIS = new Date('2009-01-03T18:15:05Z');
+// Power Law Santostasi (aktualizovaný "live fit" odpovídající charts.bitbo.io/power-law)
+// Původní paper Santostasi 2018: A=-17.01, N=5.82
+// Aktualizovaný fit (2024+ data): A=-16.92, N=5.82 → fair value dnes ~$158k
+const PL_A = Math.pow(10, -16.92);
+const PL_N = 5.82;
+// Support/Resistance multiplikátory - kalibrované na Bitbo live chart (±2σ koridor)
+const PL_SUP_MUL = 0.355;  // dno koridoru (~-0.45 log10)
+const PL_RES_MUL = 3.54;   // top koridoru (~+0.55 log10)
+
+// ========================= UTIL =========================
+const addDays = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n); return r; };
+const daysBetween = (a, b) => Math.round((b - a) / 864e5);
+const fmt = d => new Date(d).toLocaleDateString('cs-CZ', {day:'2-digit',month:'2-digit',year:'numeric'});
+const fmtMoney = n => {
+  if (n < 1) return '$' + n.toFixed(4);
+  if (n < 100) return '$' + n.toFixed(2);
+  if (n < 10000) return '$' + Math.round(n).toLocaleString('cs-CZ');
+  return '$' + Math.round(n).toLocaleString('cs-CZ');
+};
+const daysSinceGenesis = (d) => Math.max(1, (d - GENESIS) / 864e5);
+
+// ========================= STORAGE =========================
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem('btcCykly');
+    if (raw) S = { ...DEFAULTS, ...JSON.parse(raw) };
+  } catch(e) {}
+}
+function saveSettings() {
+  try { localStorage.setItem('btcCykly', JSON.stringify(S)); } catch(e) {}
+}
+
+// ========================= PARTICLES (padající ₿) =========================
+function initSnow() {
+  const c = document.getElementById('snow');
+  c.innerHTML = '';
+  if (!S.snow) return;
+  const count = 22;
+  for (let i = 0; i < count; i++) {
+    const f = document.createElement('div');
+    f.className = 'flake';
+    f.textContent = '₿';
+    const size = 10 + Math.random() * 16;
+    f.style.fontSize = size + 'px';
+    f.style.left = (Math.random() * 100) + '%';
+    f.style.setProperty('--op', (0.15 + Math.random() * 0.25).toFixed(2));
+    f.style.setProperty('--drift', ((Math.random() - 0.5) * 200).toFixed(0) + 'px');
+    f.style.setProperty('--rot', ((Math.random() - 0.5) * 720).toFixed(0) + 'deg');
+    f.style.animationDuration = (12 + Math.random() * 16) + 's';
+    f.style.animationDelay = (-Math.random() * 20) + 's';
+    c.appendChild(f);
+  }
+}
+
+// ========================= CYCLE LOGIC =========================
+function cycleTotal() { return S.bull + S.bear; }
+
+function getCycles() {
+  const ath = new Date(S.ath + 'T00:00:00');
+  const bearEnd = addDays(ath, S.bear);
+  const bullStart = addDays(ath, -S.bull);
+  const cycles = [{ label: 'Aktuální', bullStart, ath, bearEnd, idx: 0 }];
+  let cur = bearEnd;
+  for (let i = 1; i <= S.cycleCount; i++) {
+    const bs = new Date(cur);
+    const a = addDays(bs, S.bull);
+    const be = addDays(a, S.bear);
+    cycles.push({ label: `#${i}`, bullStart: bs, ath: a, bearEnd: be, idx: i });
+    cur = be;
+  }
+  return cycles;
+}
+
+function getPhase(cycles) {
+  const now = new Date();
+  for (let i = 0; i < cycles.length; i++) {
+    const c = cycles[i];
+    if (now >= c.bullStart && now <= c.bearEnd) {
+      const isBull = now <= c.ath;
+      const start = isBull ? c.bullStart : c.ath;
+      const end = isBull ? c.ath : c.bearEnd;
+      const total = daysBetween(start, end);
+      const elapsed = daysBetween(start, now);
+      return { idx: i, isBull, progress: Math.min(1, elapsed / total), elapsed, remaining: total - elapsed, total, end };
+    }
+  }
+  return null;
+}
+
+function getCountdown(targetDate) {
+  const now = new Date();
+  const diff = targetDate - now;
+  if (diff <= 0) return { d: 0, h: 0, m: 0, s: 0 };
+  return {
+    d: Math.floor(diff / 864e5),
+    h: Math.floor((diff % 864e5) / 36e5),
+    m: Math.floor((diff % 36e5) / 6e4),
+    s: Math.floor((diff % 6e4) / 1e3)
+  };
+}
+
+// ========================= POWER LAW =========================
+function powerLaw(dayNum) { return PL_A * Math.pow(dayNum, PL_N); }
+
+function estimateAthPrice(athDate) {
+  const d = daysSinceGenesis(new Date(athDate));
+  return powerLaw(d) * PL_RES_MUL;
+}
+
+let cachedPrice = null;
+let cachedPriceAge = 0;
+async function fetchBtcPrice() {
+  // 10 min cache
+  if (cachedPrice && Date.now() - cachedPriceAge < 600000) return cachedPrice;
+  try {
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), 5000);
+    const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd', { signal: ctrl.signal });
+    if (!r.ok) throw 0;
+    const j = await r.json();
+    const p = j.bitcoin.usd;
+    cachedPrice = p; cachedPriceAge = Date.now();
+    return p;
+  } catch(e) { return null; }
+}
+
+// Power Law view state
+let plCenterYear = new Date().getFullYear();
+let plYearSpan = 20; // výchozí rozsah - dost aby bylo vidět minulost i budoucnost
+let plLastPrice = null;
+let plViewBox = null; // cache pro hit-testing
+
+async function renderPowerLaw() {
+  const today = daysSinceGenesis(new Date());
+  const fair = powerLaw(today);
+  const sup = fair * PL_SUP_MUL;
+  const res = fair * PL_RES_MUL;
+
+  document.getElementById('plFair').textContent = fmtMoney(fair);
+  document.getElementById('plSup').textContent = fmtMoney(sup);
+  document.getElementById('plRes').textContent = fmtMoney(res);
+
+  const price = await fetchBtcPrice();
+  plLastPrice = price;
+  if (price != null) {
+    document.getElementById('plNow').textContent = fmtMoney(price);
+    const diff = ((price / fair) - 1) * 100;
+    const el = document.getElementById('plDiff');
+    el.textContent = (diff >= 0 ? '+' : '') + diff.toFixed(1) + '%';
+    el.className = 'kpi-value ' + (diff >= 0 ? 'red' : 'green');
+  } else {
+    document.getElementById('plNow').textContent = 'offline';
+    document.getElementById('plDiff').textContent = '—';
+  }
+
+  drawPowerLawChart();
+}
+
+function computePlRange() {
+  const half = plYearSpan / 2;
+  const startYear = Math.max(2010, plCenterYear - half);
+  const endYear   = Math.min(2050, plCenterYear + half);
+  return { startYear, endYear };
+}
+
+function drawPowerLawChart() {
+  const svg = document.getElementById('plChart');
+  if (!svg) return;
+  const W = 800, H = 320, pad = {l: 58, r: 14, t: 16, b: 34};
+  const plotW = W - pad.l - pad.r, plotH = H - pad.t - pad.b;
+
+  const { startYear, endYear } = computePlRange();
+  const startDate = new Date(startYear + '-01-01');
+  const endDate   = new Date(endYear   + '-01-01');
+  const startDay = daysSinceGenesis(startDate);
+  const endDay   = daysSinceGenesis(endDate);
+
+  const minPrice = Math.max(0.01, powerLaw(startDay) * PL_SUP_MUL * 0.5);
+  const maxPrice = powerLaw(endDay) * PL_RES_MUL * 1.5;
+  const logMin = Math.log10(minPrice), logMax = Math.log10(maxPrice);
+
+  const xScale = day => pad.l + ((day - startDay) / (endDay - startDay)) * plotW;
+  const yScale = price => pad.t + (1 - (Math.log10(price) - logMin) / (logMax - logMin)) * plotH;
+
+  // Cache pro hover logiku
+  plViewBox = { W, H, pad, plotW, plotH, startDay, endDay, logMin, logMax, xScale, yScale };
+
+  const today = daysSinceGenesis(new Date());
+  const todayX = xScale(today);
+  const todayVisible = today >= startDay && today <= endDay;
+
+  // Krok pro línie – zvětší se při širším rozsahu, zmenší při užším (plynulá křivka)
+  const step = Math.max(10, Math.round((endDay - startDay) / 400));
+
+  const makeLine = (mul, color, dash, width) => {
+    let path = '';
+    for (let d = startDay; d <= endDay; d += step) {
+      const y = yScale(powerLaw(d) * mul);
+      const x = xScale(d);
+      path += (path === '' ? 'M' : 'L') + x.toFixed(1) + ' ' + y.toFixed(1) + ' ';
+    }
+    return `<path d="${path}" stroke="${color}" stroke-width="${width}" fill="none" ${dash?'stroke-dasharray="4 3"':''} stroke-linejoin="round" stroke-linecap="round" />`;
+  };
+
+  // Výplň mezi support a resistance (fair value band)
+  let bandPath = '';
+  for (let d = startDay; d <= endDay; d += step) {
+    const y = yScale(powerLaw(d) * PL_RES_MUL);
+    bandPath += (bandPath === '' ? 'M' : 'L') + xScale(d).toFixed(1) + ' ' + y.toFixed(1) + ' ';
+  }
+  for (let d = endDay; d >= startDay; d -= step) {
+    const y = yScale(powerLaw(d) * PL_SUP_MUL);
+    bandPath += 'L' + xScale(d).toFixed(1) + ' ' + y.toFixed(1) + ' ';
+  }
+  bandPath += 'Z';
+  const band = `<path d="${bandPath}" fill="rgba(247,147,26,0.05)" stroke="none" />`;
+
+  // Y osa (log popisky)
+  let yAxis = '';
+  for (let pow10 = -2; pow10 <= 9; pow10++) {
+    const p = Math.pow(10, pow10);
+    if (p < minPrice || p > maxPrice) continue;
+    const y = yScale(p);
+    yAxis += `<line x1="${pad.l}" y1="${y}" x2="${W-pad.r}" y2="${y}" stroke="rgba(255,255,255,0.06)" />`;
+    const label = p >= 1e6 ? '$' + (p/1e6) + 'M' : p >= 1000 ? '$' + (p/1000) + 'k' : p >= 1 ? '$' + p : '$' + p.toFixed(2);
+    yAxis += `<text x="${pad.l-6}" y="${y+3}" text-anchor="end" fill="#999" font-family="monospace" font-size="10">${label}</text>`;
+  }
+
+  // X osa – roky (rozteč podle rozsahu)
+  const yearStep = plYearSpan <= 6 ? 1 : plYearSpan <= 12 ? 2 : plYearSpan <= 24 ? 4 : 5;
+  let xAxis = '';
+  const firstYear = Math.ceil(startYear / yearStep) * yearStep;
+  for (let y = firstYear; y <= endYear; y += yearStep) {
+    const d = daysSinceGenesis(new Date(y + '-01-01'));
+    const x = xScale(d);
+    xAxis += `<line x1="${x}" y1="${pad.t}" x2="${x}" y2="${H-pad.b}" stroke="rgba(255,255,255,0.04)" />`;
+    xAxis += `<text x="${x}" y="${H-pad.b+18}" text-anchor="middle" fill="#999" font-family="monospace" font-size="10">${y}</text>`;
+  }
+
+  // Halving markers (pouze jsou-li viditelné)
+  const halvings = [
+    { y: 2012, label: 'H1' }, { y: 2016, label: 'H2' },
+    { y: 2020, label: 'H3' }, { y: 2024, label: 'H4' },
+    { y: 2028, label: 'H5' }, { y: 2032, label: 'H6' },
+    { y: 2036, label: 'H7' }, { y: 2040, label: 'H8' }
+  ];
+  let halvingMarkers = '';
+  halvings.forEach(h => {
+    const d = daysSinceGenesis(new Date(h.y + '-04-01'));
+    if (d < startDay || d > endDay) return;
+    const x = xScale(d);
+    halvingMarkers += `<line x1="${x}" y1="${pad.t}" x2="${x}" y2="${H-pad.b}" stroke="rgba(255,215,0,0.15)" stroke-width="1" stroke-dasharray="2 2"/>`;
+    halvingMarkers += `<text x="${x+3}" y="${pad.t+10}" fill="rgba(255,215,0,0.6)" font-size="9" font-family="monospace">⛏${h.label}</text>`;
+  });
+
+  // DNES čára (pokud je ve výseku)
+  let todayLine = '';
+  if (todayVisible) {
+    todayLine = `<line x1="${todayX}" y1="${pad.t}" x2="${todayX}" y2="${H-pad.b}" stroke="#fff" stroke-width="1.5" stroke-dasharray="3 3" />
+      <text x="${todayX}" y="${pad.t-4}" text-anchor="middle" fill="#fff" font-size="10" font-family="monospace" font-weight="700">DNES</text>`;
+  }
+
+  // Bod aktuální ceny
+  let pricePoint = '';
+  if (plLastPrice && todayVisible) {
+    const px = todayX, py = yScale(plLastPrice);
+    pricePoint = `<circle cx="${px}" cy="${py}" r="6" fill="#fff" stroke="#F7931A" stroke-width="2.5" />
+      <circle cx="${px}" cy="${py}" r="10" fill="none" stroke="#F7931A" stroke-width="1" opacity="0.4">
+        <animate attributeName="r" from="6" to="14" dur="2s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" from="0.4" to="0" dur="2s" repeatCount="indefinite"/>
+      </circle>`;
+  }
+
+  // Hover guide line (prázdná do mousemove)
+  const hoverLine = `<g id="plHover" style="display:none;">
+    <line id="plHoverLine" x1="0" y1="${pad.t}" x2="0" y2="${H-pad.b}" stroke="rgba(247,147,26,0.8)" stroke-width="1" stroke-dasharray="2 2" />
+    <circle id="plHoverFair" r="4" fill="#F7931A" />
+    <circle id="plHoverSup" r="3" fill="#4CAF50" />
+    <circle id="plHoverRes" r="3" fill="#FF5252" />
+  </g>`;
+
+  svg.innerHTML = `
+    ${band}
+    ${yAxis}${xAxis}
+    ${halvingMarkers}
+    ${makeLine(PL_SUP_MUL, '#4CAF50', true, 1.4)}
+    ${makeLine(PL_RES_MUL, '#FF5252', true, 1.4)}
+    ${makeLine(1, '#F7931A', false, 2.2)}
+    ${todayLine}
+    ${pricePoint}
+    ${hoverLine}
+  `;
+
+  // Aktualizace labelů sliderů
+  document.getElementById('plCenterLabel').textContent = plCenterYear;
+  document.getElementById('plZoomLabel').textContent   = plYearSpan + ' let';
+}
+
+// ===================== POWER LAW INTERAKCE =====================
+function plSvgToDayX(clientX) {
+  if (!plViewBox) return null;
+  const svg = document.getElementById('plChart');
+  const rect = svg.getBoundingClientRect();
+  const pxInSvg = (clientX - rect.left) / rect.width * plViewBox.W;
+  const clamped = Math.max(plViewBox.pad.l, Math.min(plViewBox.W - plViewBox.pad.r, pxInSvg));
+  const day = plViewBox.startDay + ((clamped - plViewBox.pad.l) / plViewBox.plotW) * (plViewBox.endDay - plViewBox.startDay);
+  return { day, pxInSvg: clamped };
+}
+
+function formatPlDate(day) {
+  const ms = GENESIS.getTime() + day * 864e5;
+  const d = new Date(ms);
+  return d.toLocaleDateString('cs-CZ', { day:'2-digit', month:'2-digit', year:'numeric' });
+}
+
+function plHoverUpdate(clientX, clientY) {
+  const hit = plSvgToDayX(clientX);
+  if (!hit || !plViewBox) return;
+  const { day, pxInSvg } = hit;
+  const fair = powerLaw(day);
+  const sup  = fair * PL_SUP_MUL;
+  const res  = fair * PL_RES_MUL;
+
+  // Aktualizovat hover SVG
+  const g = document.getElementById('plHover');
+  if (g) {
+    g.style.display = '';
+    document.getElementById('plHoverLine').setAttribute('x1', pxInSvg);
+    document.getElementById('plHoverLine').setAttribute('x2', pxInSvg);
+    document.getElementById('plHoverFair').setAttribute('cx', pxInSvg);
+    document.getElementById('plHoverFair').setAttribute('cy', plViewBox.yScale(fair));
+    document.getElementById('plHoverSup').setAttribute('cx', pxInSvg);
+    document.getElementById('plHoverSup').setAttribute('cy', plViewBox.yScale(sup));
+    document.getElementById('plHoverRes').setAttribute('cx', pxInSvg);
+    document.getElementById('plHoverRes').setAttribute('cy', plViewBox.yScale(res));
+  }
+
+  // Tooltip
+  const tt = document.getElementById('plTooltip');
+  const wrap = document.getElementById('plChartWrap');
+  const wrapRect = wrap.getBoundingClientRect();
+  const localX = clientX - wrapRect.left;
+  const localY = clientY - wrapRect.top;
+  const ttW = 180, ttH = 110;
+  let left = localX + 14; let top = localY - ttH / 2;
+  if (left + ttW > wrapRect.width - 6) left = localX - ttW - 14;
+  if (top < 6) top = 6;
+  if (top + ttH > wrapRect.height - 6) top = wrapRect.height - ttH - 6;
+  tt.style.left = left + 'px';
+  tt.style.top = top + 'px';
+  tt.classList.add('show');
+  tt.querySelector('.tt-date').textContent = formatPlDate(day);
+  document.getElementById('ttFair').textContent = fmtMoney(fair);
+  document.getElementById('ttSup').textContent  = fmtMoney(sup);
+  document.getElementById('ttRes').textContent  = fmtMoney(res);
+  // Dnešní cena - zobraz jen pro datum blízko dnešku (±14 dní)
+  const todayDay = daysSinceGenesis(new Date());
+  const nowRow = document.getElementById('ttNowRow');
+  if (plLastPrice && Math.abs(day - todayDay) < 14) {
+    document.getElementById('ttNow').textContent = fmtMoney(plLastPrice);
+    nowRow.style.display = '';
+  } else {
+    nowRow.style.display = 'none';
+  }
+}
+
+function plHoverHide() {
+  const tt = document.getElementById('plTooltip');
+  if (tt) tt.classList.remove('show');
+  const g = document.getElementById('plHover');
+  if (g) g.style.display = 'none';
+}
+
+function bindPowerLawInteraction() {
+  const svg = document.getElementById('plChart');
+  const wrap = document.getElementById('plChartWrap');
+  if (!svg || !wrap) return;
+
+  // Hover
+  svg.addEventListener('mousemove', e => plHoverUpdate(e.clientX, e.clientY));
+  svg.addEventListener('mouseleave', plHoverHide);
+
+  // Touch support
+  svg.addEventListener('touchmove', e => {
+    if (e.touches.length) { plHoverUpdate(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); }
+  }, { passive: false });
+  svg.addEventListener('touchend', plHoverHide);
+
+  // Wheel = zoom (rozsah)
+  wrap.addEventListener('wheel', e => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 2 : -2;
+    plYearSpan = Math.max(4, Math.min(30, plYearSpan + delta));
+    document.getElementById('plZoomSlider').value = plYearSpan;
+    drawPowerLawChart();
+  }, { passive: false });
+
+  // Drag to pan
+  let dragging = false, startX = 0, startCenter = 0;
+  svg.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    dragging = true; startX = e.clientX; startCenter = plCenterYear;
+    svg.style.cursor = 'grabbing';
+    plHoverHide();
+  });
+  window.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const rect = svg.getBoundingClientRect();
+    const dxYears = ((e.clientX - startX) / rect.width) * plYearSpan;
+    plCenterYear = Math.max(2010, Math.min(2045, Math.round(startCenter - dxYears)));
+    document.getElementById('plCenterSlider').value = plCenterYear;
+    drawPowerLawChart();
+  });
+  window.addEventListener('mouseup', () => {
+    if (dragging) { dragging = false; svg.style.cursor = 'crosshair'; }
+  });
+
+  // Slidery
+  const centerS = document.getElementById('plCenterSlider');
+  const zoomS = document.getElementById('plZoomSlider');
+  centerS.value = plCenterYear;
+  zoomS.value = plYearSpan;
+  centerS.addEventListener('input', () => { plCenterYear = parseInt(centerS.value); drawPowerLawChart(); });
+  zoomS.addEventListener('input', () => { plYearSpan = parseInt(zoomS.value); drawPowerLawChart(); });
+
+  // Dnes
+  document.getElementById('plTodayBtn').addEventListener('click', () => {
+    plCenterYear = new Date().getFullYear();
+    plYearSpan = 20;
+    centerS.value = plCenterYear;
+    zoomS.value = plYearSpan;
+    drawPowerLawChart();
+  });
+}
+
+// ========================= HALVING =========================
+const HALVINGS = [
+  { n: 1, date: new Date('2012-11-28'), block: 210000 },
+  { n: 2, date: new Date('2016-07-09'), block: 420000 },
+  { n: 3, date: new Date('2020-05-11'), block: 630000 },
+  { n: 4, date: new Date('2024-04-20'), block: 840000 },
+];
+// Next halving ~ 210 000 blocks * 10 min = 1458 days after previous
+function estimateNextHalving() {
+  const last = HALVINGS[HALVINGS.length - 1];
+  const next = addDays(last.date, Math.round(210000 * 10 / 60 / 24));
+  return next;
+}
+function renderHalving() {
+  const next = estimateNextHalving();
+  const now = new Date();
+  const days = Math.max(0, Math.ceil((next - now) / 864e5));
+  const blocks = Math.max(0, Math.round(days * 24 * 60 / 10));
+  document.getElementById('halvDays').textContent = days.toLocaleString('cs-CZ');
+  document.getElementById('halvBlocks').textContent = blocks.toLocaleString('cs-CZ');
+  document.getElementById('halvDate').textContent = fmt(next);
+  document.getElementById('halvFrom').textContent = '3.125';
+  document.getElementById('halvTo').textContent = '1.5625';
+  document.getElementById('h5date').textContent = fmt(next);
+}
+
+// ========================= RENDER CYCLE =========================
+function render() {
+  const cycles = getCycles();
+  const phase = getPhase(cycles);
+  const TOTAL = cycleTotal();
+
+  // Phase card
+  const pc = document.getElementById('phaseCard');
+  if (phase) {
+    const pct = Math.round(phase.progress * 100);
+    const cls = phase.isBull ? 'bull' : 'bear';
+    const label = phase.isBull ? 'BÝČÍ TRH' : 'MEDVĚDÍ TRH';
+    const targetLabel = phase.isBull ? 'ATH' : 'konce medvěda';
+    const sub = `Zbývá ${phase.remaining} dní do ${targetLabel}`;
+    const cd = getCountdown(phase.end);
+
+    pc.innerHTML = `
+      <div class="card phase-card">
+        <div class="phase-header">
+          <div class="phase-dot ${cls}"></div>
+          <div><div class="phase-label">${label}</div><div class="phase-sub">${sub}</div></div>
+          <div class="phase-percent">${pct}%</div>
+        </div>
+        <div class="progress-track"><div class="progress-fill ${cls}" id="phaseFill"></div></div>
+        <div class="progress-labels"><span>${phase.elapsed} dní uplynulo</span><span>Celkem ${phase.total} dní</span></div>
+        <div class="countdown-row">
+          <div class="countdown-item"><div class="countdown-num" id="cdD">${cd.d}</div><div class="countdown-label">Dní</div></div>
+          <div class="countdown-item"><div class="countdown-num" id="cdH">${String(cd.h).padStart(2,'0')}</div><div class="countdown-label">Hodin</div></div>
+          <div class="countdown-item"><div class="countdown-num" id="cdM">${String(cd.m).padStart(2,'0')}</div><div class="countdown-label">Minut</div></div>
+          <div class="countdown-item"><div class="countdown-num" id="cdS">${String(cd.s).padStart(2,'0')}</div><div class="countdown-label">Sekund</div></div>
+        </div>
+      </div>`;
+    // Nastav šířku progress baru po vykreslení (zajistí správnou animaci 0→pct)
+    requestAnimationFrame(() => {
+      const fill = document.getElementById('phaseFill');
+      if (fill) fill.style.width = pct + '%';
+    });
+  } else pc.innerHTML = '';
+
+  // Phase change detection → notify Rust for tray
+  const phaseKey = phase ? (phase.isBull ? 'bull' : 'bear') : 'none';
+  if (IS_TAURI) tauri('update_tray', { phase: phaseKey, progress: phase ? Math.round(phase.progress*100) : 0, remaining: phase ? phase.remaining : 0 });
+  if (lastPhaseKey && lastPhaseKey !== phaseKey && S.notif) {
+    const now = new Date();
+    const inDnd = S.dnd && (now.getHours() >= 22 || now.getHours() < 7);
+    if (!inDnd) {
+      if (IS_TAURI) tauri('notify', { title: 'BTC Cykly - změna fáze', body: 'Nová fáze: ' + (phaseKey === 'bull' ? '🟢 BÝČÍ TRH' : '🔴 MEDVĚDÍ TRH') });
+      else if ('Notification' in window && Notification.permission === 'granted') new Notification('BTC Cykly', { body: 'Nová fáze: ' + phaseKey });
+    }
+  }
+  lastPhaseKey = phaseKey;
+
+  // Timeline
+  const tl = document.getElementById('timeline');
+  tl.innerHTML = '';
+  cycles.forEach((c, i) => {
+    const isActive = phase && phase.idx === i;
+    const div = document.createElement('div');
+    div.className = 'tl-item';
+    div.style.animation = `fadeSlideIn 0.5s ease ${i * 0.04}s both`;
+    let nowMarker = '';
+    if (isActive && phase) {
+      const pos = phase.isBull
+        ? (phase.elapsed / TOTAL * 100)
+        : ((S.bull + phase.elapsed) / TOTAL * 100);
+      nowMarker = `<div class="now-marker" data-pos="${pos}" style="left:0px"><div class="now-dot"></div><div class="now-text">DNES</div></div>`;
+    }
+    const open = selectedCycle === i ? 'open' : '';
+    const athPrice = estimateAthPrice(c.ath);
+    div.innerHTML = `
+      <div class="tl-label-row">
+        <span class="tl-cycle-label ${isActive ? 'active' : ''}">${c.label}${isActive ? ' ◀' : ''}</span>
+        <span class="tl-year">${c.bullStart.getFullYear()}–${c.bearEnd.getFullYear()}</span>
+      </div>
+      <div class="tl-bar" data-bull="${S.bull}" data-bear="${S.bear}">
+        <div class="bull-bar" style="opacity:${isActive ? 1 : 0.7}"><span class="bar-text">📈 ${S.bull}d</span></div>
+        <div class="bear-bar" style="opacity:${isActive ? 1 : 0.7}"><span class="bar-text">📉 ${S.bear}d</span></div>
+        ${nowMarker}
+      </div>
+      <div class="detail-card ${open}">
+        <div class="detail-grid">
+          <div class="detail-item"><span class="detail-icon">🟢</span><div><div class="detail-label">Začátek býka</div><div class="detail-value">${fmt(c.bullStart)}</div></div></div>
+          <div class="detail-item"><span class="detail-icon">🏔️</span><div><div class="detail-label">ATH (vrchol)</div><div class="detail-value orange">${fmt(c.ath)}</div></div></div>
+          <div class="detail-item"><span class="detail-icon">🔴</span><div><div class="detail-label">Konec medvěda</div><div class="detail-value">${fmt(c.bearEnd)}</div></div></div>
+          <div class="detail-item"><span class="detail-icon">💎</span><div><div class="detail-label">Odhad ATH ceny (PL)</div><div class="detail-value orange">${fmtMoney(athPrice)}</div></div></div>
+        </div>
+      </div>`;
+    div.addEventListener('click', () => { selectedCycle = selectedCycle === i ? null : i; render(); });
+    tl.appendChild(div);
+  });
+
+  // Table
+  const tb = document.getElementById('tableBody');
+  tb.innerHTML = '';
+  cycles.forEach((c, i) => {
+    const isActive = phase && phase.idx === i;
+    const tr = document.createElement('tr');
+    if (isActive) tr.className = 'active-row';
+    const athPrice = estimateAthPrice(c.ath);
+    tr.innerHTML = `
+      <td class="td-label">${c.label}${isActive ? '<span class="active-tag">NYNÍ</span>' : ''}</td>
+      <td class="td-green">${fmt(c.bullStart)}</td>
+      <td class="td-orange">${fmt(c.ath)}</td>
+      <td class="td-red">${fmt(c.bearEnd)}</td>
+      <td>${fmtMoney(athPrice)}</td>`;
+    tb.appendChild(tr);
+  });
+
+  document.getElementById('totalCycle').textContent = TOTAL + ' dní';
+
+  // === Timeline bars: explicit pixel sizing (WebView2-safe) ===
+  requestAnimationFrame(() => sizeTimelineBars());
+}
+
+function sizeTimelineBars() {
+  document.querySelectorAll('.tl-bar').forEach(bar => {
+    const w = bar.offsetWidth;
+    if (!w) return;
+    const bullDays = parseInt(bar.dataset.bull, 10) || 0;
+    const bearDays = parseInt(bar.dataset.bear, 10) || 0;
+    const total = bullDays + bearDays;
+    if (!total) return;
+    const bullPx = Math.round(w * bullDays / total);
+    const bearPx = w - bullPx;
+    const bull = bar.querySelector('.bull-bar');
+    const bear = bar.querySelector('.bear-bar');
+    if (bull) { bull.style.left = '0px'; bull.style.width = bullPx + 'px'; }
+    if (bear) { bear.style.left = bullPx + 'px'; bear.style.width = bearPx + 'px'; }
+    // Position the "DNES" marker in pixels (WebView2-safe)
+    const marker = bar.querySelector('.now-marker');
+    if (marker) {
+      const posPercent = parseFloat(marker.dataset.pos) || 0;
+      const markerPx = Math.round(w * posPercent / 100);
+      marker.style.left = markerPx + 'px';
+    }
+  });
+}
+
+window.addEventListener('resize', () => sizeTimelineBars());
+
+// ========================= UI BINDING =========================
+function applyTheme() {
+  document.body.classList.remove('theme-light','theme-oled','size-large','size-xlarge');
+  if (S.theme === 'light') document.body.classList.add('theme-light');
+  if (S.theme === 'oled') document.body.classList.add('theme-oled');
+  if (S.size === 'large') document.body.classList.add('size-large');
+  if (S.size === 'xlarge') document.body.classList.add('size-xlarge');
+}
+
+function bindUI() {
+  // Tabs
+  document.querySelectorAll('.tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('panel-' + btn.dataset.panel).classList.add('active');
+      if (btn.dataset.panel === 'powerlaw') renderPowerLaw();
+      if (btn.dataset.panel === 'halving') renderHalving();
+    });
+  });
+
+  // Cycle quick
+  const ath = document.getElementById('athInput'); ath.value = S.ath;
+  ath.addEventListener('change', () => { S.ath = ath.value; selectedCycle = null; saveSettings(); render(); renderPowerLaw(); });
+  document.getElementById('countVal').textContent = S.cycleCount;
+  document.getElementById('decBtn').addEventListener('click', () => { S.cycleCount = Math.max(1, S.cycleCount - 1); document.getElementById('countVal').textContent = S.cycleCount; saveSettings(); render(); });
+  document.getElementById('incBtn').addEventListener('click', () => { S.cycleCount = Math.min(20, S.cycleCount + 1); document.getElementById('countVal').textContent = S.cycleCount; saveSettings(); render(); });
+
+  // Settings: presets
+  const presets = { classic:[1064,364], conservative:[1200,460], aggressive:[950,300], halving:[1260,200] };
+  const preset = document.getElementById('presetSel');
+  const bullI = document.getElementById('bullInp'); bullI.value = S.bull;
+  const bearI = document.getElementById('bearInp'); bearI.value = S.bear;
+  preset.addEventListener('change', () => {
+    if (presets[preset.value]) { S.bull = presets[preset.value][0]; S.bear = presets[preset.value][1]; bullI.value = S.bull; bearI.value = S.bear; saveSettings(); render(); }
+  });
+  [bullI, bearI].forEach(inp => inp.addEventListener('change', () => {
+    S.bull = parseInt(bullI.value) || 1064; S.bear = parseInt(bearI.value) || 364;
+    preset.value = 'custom'; saveSettings(); render();
+  }));
+
+  // Theme + size
+  const themeSel = document.getElementById('themeSel'); themeSel.value = S.theme;
+  themeSel.addEventListener('change', () => { S.theme = themeSel.value; saveSettings(); applyTheme(); });
+  const sizeSel = document.getElementById('sizeSel'); sizeSel.value = S.size;
+  sizeSel.addEventListener('change', () => { S.size = sizeSel.value; saveSettings(); applyTheme(); });
+
+  // Toggles
+  const toggles = [
+    ['snowToggle','snow', v => initSnow()],
+    ['notifToggle','notif', null],
+    ['dndToggle','dnd', null],
+    ['trayToggle','tray', v => IS_TAURI && tauri('set_close_to_tray', { enabled: v })],
+    ['autostartToggle','autostart', v => IS_TAURI && tauri('set_autostart', { enabled: v })],
+  ];
+  toggles.forEach(([id, key, fn]) => {
+    const el = document.getElementById(id);
+    if (S[key]) el.classList.add('on'); else el.classList.remove('on');
+    el.addEventListener('click', () => {
+      S[key] = !S[key];
+      el.classList.toggle('on', S[key]);
+      saveSettings();
+      if (fn) fn(S[key]);
+    });
+  });
+
+  // Reset
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    if (confirm('Resetovat všechna nastavení na výchozí hodnoty?')) {
+      S = { ...DEFAULTS }; saveSettings(); location.reload();
+    }
+  });
+  document.getElementById('exportBtn').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(S, null, 2)], {type:'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = 'btc-cykly-config.json'; a.click();
+  });
+
+  // Keyboard
+  document.addEventListener('keydown', e => {
+    if (e.key === 'F5') { e.preventDefault(); render(); renderPowerLaw(); }
+    if (e.ctrlKey && e.key === ',') { e.preventDefault(); document.querySelector('[data-panel=settings]').click(); }
+    if (e.ctrlKey && ['1','2','3','4'].includes(e.key)) {
+      e.preventDefault();
+      const m = { '1':'cycle','2':'powerlaw','3':'halving','4':'settings' };
+      document.querySelector(`[data-panel=${m[e.key]}]`).click();
+    }
+    if (e.key === 'Escape' && IS_TAURI && S.tray) tauri('minimize_to_tray');
+    if (e.ctrlKey && e.key.toLowerCase() === 'q' && IS_TAURI) tauri('quit_app');
+  });
+
+  document.getElementById('buildDate').textContent = document.lastModified || 'dev';
+}
+
+// ========================= COUNTDOWN TICK =========================
+function tick() {
+  const cycles = getCycles();
+  const phase = getPhase(cycles);
+  if (!phase) return;
+  const cd = getCountdown(phase.end);
+  const el = id => document.getElementById(id);
+  if (el('cdD')) el('cdD').textContent = cd.d;
+  if (el('cdH')) el('cdH').textContent = String(cd.h).padStart(2, '0');
+  if (el('cdM')) el('cdM').textContent = String(cd.m).padStart(2, '0');
+  if (el('cdS')) el('cdS').textContent = String(cd.s).padStart(2, '0');
+}
+setInterval(tick, 1000);
+// Re-render main cycle every minute (pro detekci změny fáze)
+setInterval(() => { render(); }, 60000);
+
+// ========================= INIT =========================
+(function init() {
+  loadSettings();
+  applyTheme();
+  bindUI();
+  bindPowerLawInteraction();
+  initSnow();
+  render();
+  // Notifikace permission (webový fallback, pokud Tauri neběží)
+  if (!IS_TAURI && 'Notification' in window && Notification.permission === 'default') {
+    // jemně: požádej až první interakci
+    document.addEventListener('click', () => Notification.requestPermission(), { once: true });
+  }
+})();
+
+// ========================= PWA: SERVICE WORKER REGISTRATION =========================
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js')
+      .then(reg => console.log('[PWA] Service Worker registered:', reg.scope))
+      .catch(err => console.warn('[PWA] Service Worker registration failed:', err));
+  });
+}
+
+// ========================= PWA: INSTALL PROMPT =========================
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  console.log('[PWA] Install prompt available — můžeš nainstalovat aplikaci');
+});
+
+window.addEventListener('appinstalled', () => {
+  console.log('[PWA] Aplikace byla nainstalována');
+  deferredInstallPrompt = null;
+});
+</script>
+</body>
+</html>

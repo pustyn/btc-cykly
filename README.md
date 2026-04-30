@@ -1,0 +1,142 @@
+# BTC Cykly — PWA (Progressive Web App)
+
+Webová verze BTC Cykly aplikace, instalovatelná na **Android, iOS i desktop** přes "Přidat na plochu".
+
+## 📦 Obsah balíčku
+
+```
+BTC_Cykly_PWA/
+├── index.html              # Hlavní aplikace
+├── manifest.json           # PWA metadata (jméno, ikony, barvy)
+├── service-worker.js       # Offline support
+├── icons/                  # Ikony 16-512 px
+└── README.md               # Tento soubor
+```
+
+## 🚀 Deployment na GitHub Pages — krok za krokem
+
+### 1. Vytvořit GitHub repozitář
+
+1. Přihlaš se na https://github.com a klikni na **+** → **New repository**
+2. **Repository name:** `btc-cykly` (nebo cokoli jiného)
+3. **Visibility:** Public (musí být public pro free GitHub Pages)
+4. **Initialize this repository with:** NIC nezaškrtávej (žádný README, gitignore, license)
+5. Klikni **Create repository**
+
+### 2. Nahrát soubory do repozitáře
+
+#### Varianta A — přes web (nejjednodušší)
+
+1. Na stránce nového repozitáře klikni na **uploading an existing file**
+2. Přetáhni do okna VŠECHNY soubory ze složky `BTC_Cykly_PWA`:
+   - `index.html`
+   - `manifest.json`
+   - `service-worker.js`
+   - Celou složku `icons/`
+3. Dolů napiš commit message: `Initial PWA upload`
+4. Klikni **Commit changes**
+
+#### Varianta B — přes Git CLI (pokud máš nainstalovaný)
+
+```bash
+cd D:\Projekty_Claude\BTC\BTC_Cykly_PWA
+git init
+git add .
+git commit -m "Initial PWA upload"
+git branch -M main
+git remote add origin https://github.com/TVE_USERNAME/btc-cykly.git
+git push -u origin main
+```
+
+### 3. Aktivovat GitHub Pages
+
+1. V repozitáři klikni na záložku **Settings**
+2. V levém menu **Pages**
+3. **Source:** Deploy from a branch
+4. **Branch:** `main` / `/(root)`
+5. Klikni **Save**
+6. Počkej ~1 minutu, až GitHub aplikaci vystaví
+
+### 4. Otevřít aplikaci
+
+URL bude: `https://TVE_USERNAME.github.io/btc-cykly/`
+
+GitHub Pages ti tu URL ukáže ve **Settings → Pages** po deployu.
+
+## 📱 Instalace na Android
+
+1. Otevři URL v **Chrome** na Androidu
+2. Po pár sekundách Chrome zobrazí pop-up "Přidat na plochu" — klikni **Přidat**
+3. Případně: Menu (⋮) → **Přidat na plochu** → **Přidat**
+4. Aplikace se objeví jako klasická ikona, bez URL bar, bez prohlížeče
+
+## 🍎 Instalace na iOS (Safari)
+
+1. Otevři URL v **Safari** na iPhone/iPad
+2. Klikni **Sdílet** (čtverec se šipkou)
+3. **Přidat na plochu** (Add to Home Screen)
+4. Klikni **Přidat**
+
+> ⚠️ iOS má omezenější PWA podporu než Android — některé funkce (notifikace) nemusí fungovat.
+
+## 🖥️ Instalace na desktopu (Chrome / Edge)
+
+1. Otevři URL v Chrome nebo Edge
+2. V adresním řádku vpravo zobrazí ikonu **install** (⊕ nebo monitor s šipkou)
+3. Klikni a potvrď **Install**
+4. Aplikace se otevře jako samostatné okno bez prohlížeče
+
+## 🔧 Aktualizace aplikace
+
+Když upravíš kód:
+
+1. Změň verzi cache v `service-worker.js`:
+   ```javascript
+   const CACHE_NAME = 'btc-cykly-v1.0.1';  // zvedni číslo
+   ```
+2. Push do GitHubu (drag & drop přepíše soubor, nebo `git push`)
+3. Uživatelé dostanou novou verzi při dalším otevření aplikace
+
+## 🔍 Test offline režimu
+
+1. Otevři aplikaci v Chrome
+2. Vypni Wi-Fi/data
+3. Reload stránky → měla by stále fungovat (kromě live BTC ceny z API)
+
+## 🐛 Troubleshooting
+
+### Service worker se neregistruje
+- **Důvod:** GitHub Pages musí běžet přes **HTTPS** (běží defaultně)
+- Pokud testuješ lokálně, použij `python -m http.server 8000` a otevři `http://localhost:8000` (localhost je výjimka pro HTTPS požadavek)
+
+### Manifest nefunguje
+- Zkontroluj DevTools → **Application** → **Manifest** v Chrome
+- Tam uvidíš případné chyby
+
+### Ikony se nezobrazují
+- Cesty v `manifest.json` jsou **relativní** (`icons/icon-192.png`)
+- Pokud máš repozitář v podsložce, GitHub Pages může vyžadovat absolutní cestu — uprav podle potřeby
+
+## 💡 Tipy
+
+- **Vlastní doména:** V Settings → Pages → Custom domain můžeš nastavit vlastní URL
+- **HTTPS:** GitHub Pages má HTTPS defaultně, není potřeba nic nastavovat
+- **Analytika:** Můžeš přidat Google Analytics nebo Plausible pro tracking
+- **Aktualizace:** Push do main = automatický redeploy během minuty
+
+## 📊 Co aplikace umí
+
+- 📈 4letý Bitcoin cyklus (1064 dní býk + 364 dní medvěd)
+- 📉 Power Law model (kalibrován na Bitbo live chart)
+- 🔪 Halving countdown
+- 🌍 Vizuální časová osa pro budoucí cykly
+- 💾 Lokální ukládání nastavení (localStorage)
+- 📴 Offline režim přes service worker
+
+## 🎯 Verze
+
+**v1.0.0** — první PWA release, funkčně shodný s Tauri Windows aplikací
+
+---
+
+Made with ❤️ a Bitcoin maximalismem 🟠
