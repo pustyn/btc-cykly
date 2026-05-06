@@ -1,6 +1,7 @@
 {
   "name": "BTC Cykly",
   "short_name": "BTC Cykly",
+  "version": "1.0.1",
   "description": "Predikce 4letých Bitcoin cyklů — 1064/364 dní, Power Law model, halving countdown",
   "start_url": "./index.html",
   "scope": "./",

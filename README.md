@@ -1,6 +1,27 @@
 # BTC Cykly — PWA (Progressive Web App)
 
+**Aktuální verze: v1.0.1** • Vydáno: 2026-05-06
+
 Webová verze BTC Cykly aplikace, instalovatelná na **Android, iOS i desktop** přes "Přidat na plochu".
+
+## 📜 Changelog
+
+### v1.0.1 (2026-05-06)
+- ✨ **Nové:** Live BTC cena z CoinGecko API (auto-refresh 5 min)
+- ✨ **Nové:** Zobrazení posledního ATH s datem
+- ✨ **Nové:** Progress bar vzdálenosti od ATH
+- ✨ **Nové:** Push notifikace při překonání ATH (Tauri + PWA)
+- 🎨 **UI:** Nová karta "AKTUÁLNÍ CENA / POSLEDNÍ ATH" v záložce CYKLUS
+- 📱 **Mobile:** Optimalizace zobrazení na úzkých obrazovkách
+- 🔄 Cache verze: btc-cykly-v1.0.1
+
+### v1.0.0 (2026-04-30)
+- 🎉 První PWA release
+- ✅ Funkčně shodný s Tauri Windows aplikací
+- 📊 4letý Bitcoin cyklus (1064 býk + 364 medvěd)
+- 📉 Power Law model (kalibrovaný na Bitbo)
+- 🔪 Halving countdown
+- 🌍 Vizuální časová osa
 
 ## 📦 Obsah balíčku
 
@@ -133,9 +154,11 @@ Když upravíš kód:
 - 💾 Lokální ukládání nastavení (localStorage)
 - 📴 Offline režim přes service worker
 
-## 🎯 Verze
+## 🎯 Aktuální verze
 
-**v1.0.1** — první PWA release, funkčně shodný s Tauri Windows aplikací
+**v1.0.1** — Live BTC cena, ATH zobrazení, ATH notifikace
+
+> Detailní changelog viz nahoře v sekci 📜 Changelog.
 
 ---
 

@@ -2,7 +2,7 @@
 //  BTC Cykly - Service Worker (offline support)
 // ===========================================
 
-const CACHE_NAME = 'btc-cykly-v1.1.0';
+const CACHE_NAME = 'btc-cykly-v1.0.1';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
