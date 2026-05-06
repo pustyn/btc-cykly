@@ -135,7 +135,7 @@ Když upravíš kód:
 
 ## 🎯 Verze
 
-**v1.0.0** — první PWA release, funkčně shodný s Tauri Windows aplikací
+**v1.0.1** — první PWA release, funkčně shodný s Tauri Windows aplikací
 
 ---
 
