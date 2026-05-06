@@ -363,6 +363,26 @@ footer { text-align: center; padding: 18px 0; font-size: 10px; color: var(--text
 
 /* Mini cycle-compare chart */
 
+/* ====================  LIVE PRICE & ATH CARD  ==================== */
+.live-price-card { padding: 14px 18px; margin-bottom: 12px; }
+.lp-row { display: flex; align-items: stretch; gap: 14px; }
+.lp-side { flex: 1; min-width: 0; }
+.lp-divider { width: 1px; background: rgba(255,255,255,0.08); }
+.lp-label { font-size: 9px; letter-spacing: 1.2px; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; font-weight: 700; }
+.lp-value { font-size: 22px; font-weight: 800; font-family: var(--font-mono); color: var(--orange); line-height: 1.1; }
+.lp-meta { font-size: 11px; color: var(--text-dim); margin-top: 3px; font-family: var(--font-mono); }
+.lp-meta.up { color: #4caf50; font-weight: 700; }
+.lp-meta.down { color: #ef5350; font-weight: 700; }
+.lp-progress-wrap { margin-top: 12px; }
+.lp-progress-label { font-size: 10px; color: var(--text-dim); margin-bottom: 4px; display: flex; justify-content: space-between; font-family: var(--font-mono); }
+.lp-progress-bar { height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; }
+.lp-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #F7931A, #FFB347); transition: width 0.6s ease; }
+.lp-ath-broken { animation: lpPulse 1.5s ease infinite; }
+@keyframes lpPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(247,147,26,0.6); }
+  50% { box-shadow: 0 0 20px 5px rgba(247,147,26,0.4); }
+}
+
 /* ====================  MOBILE RESPONSIVE  ==================== */
 @media (max-width: 600px) {
   body { font-size: 14px; }
@@ -394,6 +414,10 @@ footer { text-align: center; padding: 18px 0; font-size: 10px; color: var(--text
   button, .tab, .qty-btn { min-height: 40px; }
   /* Snow vypneme na mobilu - setri baterii */
   .snow { display: none !important; }
+  /* Live price card na mobilu - vertikalni layout */
+  .lp-row { flex-direction: column; gap: 8px; }
+  .lp-divider { display: none; }
+  .lp-value { font-size: 20px !important; }
 }
 
 /* iOS safe area pro notch */
@@ -436,6 +460,32 @@ footer { text-align: center; padding: 18px 0; font-size: 10px; color: var(--text
 
   <!-- ============= CYCLE ============= -->
   <section class="panel active" id="panel-cycle">
+
+    <!-- LIVE BTC PRICE & ATH -->
+    <div class="card live-price-card" id="livePriceCard">
+      <div class="lp-row">
+        <div class="lp-side">
+          <div class="lp-label">₿ AKTUÁLNÍ CENA</div>
+          <div class="lp-value" id="lpCurrent">—</div>
+          <div class="lp-meta" id="lpChange"></div>
+        </div>
+        <div class="lp-divider"></div>
+        <div class="lp-side">
+          <div class="lp-label">🏔️ POSLEDNÍ ATH</div>
+          <div class="lp-value" id="lpAth">—</div>
+          <div class="lp-meta" id="lpAthDate"></div>
+        </div>
+      </div>
+      <div class="lp-progress-wrap">
+        <div class="lp-progress-label" id="lpDistance">
+          <span>Načítám…</span><span></span>
+        </div>
+        <div class="lp-progress-bar">
+          <div class="lp-progress-fill" id="lpProgressFill"></div>
+        </div>
+      </div>
+    </div>
+
     <div id="phaseCard"></div>
 
     <div class="settings-quick">
@@ -1501,6 +1551,145 @@ function bindUI() {
   document.getElementById('buildDate').textContent = document.lastModified || 'dev';
 }
 
+// ========================= LIVE BTC PRICE & ATH (CoinGecko) =========================
+const COINGECKO_PRICE_URL = 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true';
+const COINGECKO_COIN_URL  = 'https://api.coingecko.com/api/v3/coins/bitcoin?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=false';
+const ATH_STORAGE_KEY = 'btc_ath_data_v1';
+const PRICE_REFRESH_MS = 5 * 60 * 1000; // 5 minut
+let livePriceState = { cur: null, athPrice: null, athDate: null, change24h: null };
+
+async function fetchLivePrice() {
+  try {
+    const [priceR, coinR] = await Promise.all([
+      fetch(COINGECKO_PRICE_URL),
+      fetch(COINGECKO_COIN_URL)
+    ]);
+    if (!priceR.ok || !coinR.ok) throw new Error('HTTP ' + priceR.status + '/' + coinR.status);
+    const priceJ = await priceR.json();
+    const coinJ = await coinR.json();
+    return {
+      cur: priceJ.bitcoin && priceJ.bitcoin.usd,
+      change24h: priceJ.bitcoin && priceJ.bitcoin.usd_24h_change,
+      athPrice: coinJ.market_data && coinJ.market_data.ath && coinJ.market_data.ath.usd,
+      athDate: coinJ.market_data && coinJ.market_data.ath_date && coinJ.market_data.ath_date.usd
+    };
+  } catch (e) {
+    console.warn('[LivePrice] CoinGecko fetch failed:', e);
+    return null;
+  }
+}
+
+function formatBtcPrice(n) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  return '$' + Math.round(n).toLocaleString('en-US');
+}
+
+function formatAthDate(iso) {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    return d.getDate() + '. ' + (d.getMonth()+1) + '. ' + d.getFullYear();
+  } catch (e) { return ''; }
+}
+
+async function updateLivePriceCard() {
+  const data = await fetchLivePrice();
+  if (!data || data.cur === null) {
+    const cur = document.getElementById('lpCurrent');
+    if (cur && cur.textContent === '—') cur.textContent = 'Nedostupné';
+    return;
+  }
+  livePriceState = data;
+  const { cur, change24h, athPrice, athDate } = data;
+
+  const lpCur = document.getElementById('lpCurrent');
+  if (lpCur) lpCur.textContent = formatBtcPrice(cur);
+
+  const lpCh = document.getElementById('lpChange');
+  if (lpCh && typeof change24h === 'number') {
+    const prefix = change24h >= 0 ? '+' : '';
+    lpCh.textContent = prefix + change24h.toFixed(2) + '% (24h)';
+    lpCh.className = 'lp-meta ' + (change24h >= 0 ? 'up' : 'down');
+  }
+
+  const lpAth = document.getElementById('lpAth');
+  const lpAthDate = document.getElementById('lpAthDate');
+  if (lpAth) lpAth.textContent = formatBtcPrice(athPrice);
+  if (lpAthDate) lpAthDate.textContent = formatAthDate(athDate);
+
+  const lpDist = document.getElementById('lpDistance');
+  const lpFill = document.getElementById('lpProgressFill');
+  if (cur && athPrice) {
+    const ratioPct = Math.min(100, (cur / athPrice) * 100);
+    if (cur >= athPrice) {
+      if (lpDist) lpDist.innerHTML = '<span style="color:#4caf50;font-weight:700">🚀 NOVÉ ATH!</span><span style="color:#4caf50">100%</span>';
+      const card = document.getElementById('livePriceCard');
+      if (card) card.classList.add('lp-ath-broken');
+    } else {
+      const distPct = ((athPrice - cur) / cur * 100);
+      if (lpDist) lpDist.innerHTML = '<span>Do ATH zbývá <strong>+' + distPct.toFixed(1) + '%</strong></span><span style="color:var(--orange)">' + ratioPct.toFixed(0) + '%</span>';
+      const card = document.getElementById('livePriceCard');
+      if (card) card.classList.remove('lp-ath-broken');
+    }
+    if (lpFill) lpFill.style.width = ratioPct.toFixed(2) + '%';
+  }
+
+  checkAthBreakthrough(cur, athPrice, athDate);
+}
+
+function checkAthBreakthrough(currentPrice, currentAth, currentAthDate) {
+  if (!currentPrice || !currentAth) return;
+  let stored;
+  try { stored = JSON.parse(localStorage.getItem(ATH_STORAGE_KEY) || '{}'); }
+  catch (e) { stored = {}; }
+  const lastKnownAth = stored.athPrice || 0;
+
+  if (lastKnownAth > 0 && currentAth > lastKnownAth) {
+    notifyAthBreakthrough(currentAth, currentPrice);
+  }
+  else if (lastKnownAth > 0 && currentPrice > lastKnownAth && !stored.notifiedBreakthrough) {
+    notifyAthBreakthrough(currentPrice, currentPrice);
+    stored.notifiedBreakthrough = true;
+  }
+
+  if (currentPrice < lastKnownAth * 0.95) {
+    stored.notifiedBreakthrough = false;
+  }
+
+  if (currentAth !== lastKnownAth) {
+    stored.athPrice = currentAth;
+    stored.athDate = currentAthDate;
+    stored.notifiedBreakthrough = false;
+  }
+  stored.lastChecked = Date.now();
+  localStorage.setItem(ATH_STORAGE_KEY, JSON.stringify(stored));
+}
+
+function notifyAthBreakthrough(athPrice, currentPrice) {
+  const title = '🚀 Bitcoin překonal ATH!';
+  const body  = 'Nové ATH: ' + formatBtcPrice(athPrice) + ' • Aktuální: ' + formatBtcPrice(currentPrice);
+  console.log('[ATH NOTIF]', title, body);
+
+  if (IS_TAURI) {
+    tauri('notify', { title, body });
+  }
+  else if ('Notification' in window && Notification.permission === 'granted') {
+    try {
+      new Notification(title, {
+        body,
+        icon: 'icons/icon-192.png',
+        badge: 'icons/icon-64.png',
+        tag: 'btc-ath-' + Math.round(athPrice),
+        requireInteraction: false,
+        vibrate: [200, 100, 200]
+      });
+    } catch (e) { console.warn('Notification failed:', e); }
+  }
+  else if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
 // ========================= COUNTDOWN TICK =========================
 function tick() {
   const cycles = getCycles();
@@ -1516,6 +1705,8 @@ function tick() {
 setInterval(tick, 1000);
 // Re-render main cycle every minute (pro detekci změny fáze)
 setInterval(() => { render(); }, 60000);
+// Live BTC price refresh kazdych 5 minut
+setInterval(() => { updateLivePriceCard(); }, PRICE_REFRESH_MS);
 
 // ========================= INIT =========================
 (function init() {
@@ -1525,6 +1716,7 @@ setInterval(() => { render(); }, 60000);
   bindPowerLawInteraction();
   initSnow();
   render();
+  updateLivePriceCard();
   // Notifikace permission (webový fallback, pokud Tauri neběží)
   if (!IS_TAURI && 'Notification' in window && Notification.permission === 'default') {
     // jemně: požádej až první interakci
