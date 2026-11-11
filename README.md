@@ -1,10 +1,15 @@
 # BTC Cykly — PWA (Progressive Web App)
 
-**Aktuální verze: v1.1.0** • Vydáno: 2026-11-11
+**Aktuální verze: v1.1.1** • Vydáno: 2026-11-11
 
 Webová verze BTC Cykly aplikace, instalovatelná na **Android, iOS i desktop** přes "Přidat na plochu".
 
 ## 📜 Changelog
+
+### v1.1.1 (2026-11-11)
+- 🔄 Graf Power Law se udržuje aktuální sám: živá cena jako poslední bod, historie se obnovuje každou hodinu a hromadí se v zařízení
+- ℹ️ Pod grafem je vidět, kdy byla data naposledy načtena
+- 🔄 Cache verze: btc-cykly-v1.1.1
 
 ### v1.1.0 (2026-11-11)
 - ✨ **Nové:** Graf Power Law ukazuje skutečnou historii ceny BTC od roku 2010
@@ -130,7 +135,7 @@ Když upravíš kód:
 
 1. Změň verzi cache v `service-worker.js`:
    ```javascript
-   const CACHE_NAME = 'btc-cykly-v1.1.0';  // zvedni číslo
+   const CACHE_NAME = 'btc-cykly-v1.1.1';  // zvedni číslo
    ```
 2. Zvedni číslo verze i na ostatních místech (seznam je v `CLAUDE.md` v kořeni projektu, sekce 4.3) a doplň `CHANGELOG.md`
 3. Nahraj obsah této složky do repozitáře `pustyn/btc-cykly`:
@@ -144,9 +149,10 @@ Když upravíš kód:
 
 ### Obnova historie ceny v grafu Power Law
 
-Graf kreslí skutečnou cenu BTC z dat vestavěných v `index.html`. Poslední rok si
-aplikace doplňuje sama z CoinGecko, starší data ne. Aspoň jednou ročně je proto
-potřeba v kořeni projektu spustit:
+Graf kreslí skutečnou cenu BTC z dat vestavěných v `index.html` a novější dny si
+doplňuje sám (CoinGecko, v nouzi blockchain.info). Běžně se o to není potřeba starat.
+Při vydávání nové verze je ale dobré vestavěná data obnovit, aby graf byl úplný
+i offline a při první instalaci. V kořeni projektu spusť:
 
 ```bash
 python tools/gen_btc_hist.py
@@ -197,7 +203,7 @@ Pak vydej novou verzi podle kroků výše.
 
 ## 🎯 Aktuální verze
 
-**v1.1.0** — Historie ceny BTC v grafu Power Law, přehled období pod supportem
+**v1.1.1** — Graf Power Law se skutečnou historií ceny, který se sám udržuje aktuální
 
 > Detailní changelog viz nahoře v sekci 📜 Changelog.
 

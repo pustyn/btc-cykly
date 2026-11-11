@@ -5,6 +5,18 @@ Všechny významné změny v projektu BTC Cykly jsou zaznamenány zde.
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [1.1.1] - 2026-11-11
+
+### 🎨 Vylepšeno
+- Graf Power Law se udržuje aktuální sám: živá cena je posledním bodem historie a počítá se i do přehledu „pod supportem" (včetně stavu „právě teď")
+- Denní historie se obnovuje každou hodinu (dřív po 12 hodinách) a stažené dny se v zařízení hromadí, takže graf nezestárne ani bez nové verze aplikace
+- Pod grafem je řádek se stavem dat (čas načtení ceny, datum poslední historie)
+- Správné skloňování délky období (1 den, 2 dny, 5 dní)
+
+### 🔧 Technické
+- Záložní zdroj historie `api.blockchain.info` pro případ mezery delší než rok (přidán do CSP ve Windows verzi)
+- Cache verze v service workeru: `btc-cykly-v1.1.1`
+
 ## [1.1.0] - 2026-11-11
 
 ### ✨ Přidáno
