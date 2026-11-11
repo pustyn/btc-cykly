@@ -38,8 +38,18 @@ BTC_Cykly_PWA/
 ├── manifest.json           # PWA metadata (jméno, ikony, barvy)
 ├── service-worker.js       # Offline support
 ├── icons/                  # Ikony 16-512 px
+├── CHANGELOG.md            # Podrobný přehled změn
 └── README.md               # Tento soubor
 ```
+
+## 🌐 Kde aplikace běží
+
+- **Živá adresa:** https://pustyn.github.io/btc-cykly/
+- **Repozitář:** https://github.com/pustyn/btc-cykly (větev `main`)
+
+Repozitář obsahuje **jen obsah této složky** (`BTC_Cykly_PWA`), ne celý projekt.
+Novou verzi nahraješ podle sekce „Aktualizace aplikace" níže. Následující návod
+na založení repozitáře je potřeba jen při úplně prvním nasazení (nebo na jiný účet).
 
 ## 🚀 Deployment na GitHub Pages — krok za krokem
 
@@ -122,14 +132,34 @@ Když upravíš kód:
    ```javascript
    const CACHE_NAME = 'btc-cykly-v1.1.0';  // zvedni číslo
    ```
-2. Push do GitHubu (drag & drop přepíše soubor, nebo `git push`)
-3. Uživatelé dostanou novou verzi při dalším otevření aplikace
+2. Zvedni číslo verze i na ostatních místech (seznam je v `CLAUDE.md` v kořeni projektu, sekce 4.3) a doplň `CHANGELOG.md`
+3. Nahraj obsah této složky do repozitáře `pustyn/btc-cykly`:
+   - **přes web:** na GitHubu **Add file → Upload files**, přetáhni změněné soubory a potvrď, nebo
+   - **přes Git:** naklonuj repozitář do dočasné složky, zkopíruj do něj obsah `BTC_Cykly_PWA`, pak `git add -A`, `git commit` a `git push origin main`
+4. GitHub Pages se obnoví asi do minuty; uživatelé dostanou novou verzi při dalším otevření aplikace
+
+> Při lokálním testu se po úpravě může dál zobrazovat stará verze – service worker ji
+> drží v cache. Pomůže změna `CACHE_NAME`, nebo v DevTools → **Application** →
+> **Service Workers** → **Unregister** a **Clear storage**.
+
+### Obnova historie ceny v grafu Power Law
+
+Graf kreslí skutečnou cenu BTC z dat vestavěných v `index.html`. Poslední rok si
+aplikace doplňuje sama z CoinGecko, starší data ne. Aspoň jednou ročně je proto
+potřeba v kořeni projektu spustit:
+
+```bash
+python tools/gen_btc_hist.py
+```
+
+Skript stáhne denní ceny z blockchain.info a přepíše data v PWA i ve Windows verzi.
+Pak vydej novou verzi podle kroků výše.
 
 ## 🔍 Test offline režimu
 
 1. Otevři aplikaci v Chrome
 2. Vypni Wi-Fi/data
-3. Reload stránky → měla by stále fungovat (kromě live BTC ceny z API)
+3. Reload stránky → měla by stále fungovat (kromě live BTC ceny z API); graf Power Law ukáže historii z vestavěných dat
 
 ## 🐛 Troubleshooting
 
@@ -155,7 +185,11 @@ Když upravíš kód:
 ## 📊 Co aplikace umí
 
 - 📈 4letý Bitcoin cyklus (1064 dní býk + 364 dní medvěd)
-- 📉 Power Law model (kalibrován na Bitbo live chart)
+- 📉 Power Law model (kalibrován na Bitbo live chart) se skutečnou historií ceny BTC od roku 2010
+- 🔻 Přehled období, kdy cena klesla pod support (dno koridoru)
+- 💹 Živá cena BTC z CoinGecko (obnova každých 5 minut), poslední ATH a vzdálenost od něj
+- 🔔 Notifikace při překonání ATH a při změně fáze cyklu
+- 🎨 Tři témata (tmavé, světlé, OLED) a tři velikosti písma
 - 🔪 Halving countdown
 - 🌍 Vizuální časová osa pro budoucí cykly
 - 💾 Lokální ukládání nastavení (localStorage)
