@@ -1,10 +1,17 @@
 # BTC Cykly — PWA (Progressive Web App)
 
-**Aktuální verze: v1.0.1** • Vydáno: 2026-05-06
+**Aktuální verze: v1.1.0** • Vydáno: 2026-11-11
 
 Webová verze BTC Cykly aplikace, instalovatelná na **Android, iOS i desktop** přes "Přidat na plochu".
 
 ## 📜 Changelog
+
+### v1.1.0 (2026-11-11)
+- ✨ **Nové:** Graf Power Law ukazuje skutečnou historii ceny BTC od roku 2010
+- ✨ **Nové:** Zvýraznění míst, kde cena klesla pod support, a karta s přehledem těchto období
+- 🎨 **UI:** Graf je čitelný i ve světlém tématu, značky halvingů sedí na skutečná data
+- 🔧 Méně dotazů na CoinGecko, oprava přenosu nastavení tray po restartu (Windows)
+- 🔄 Cache verze: btc-cykly-v1.1.0
 
 ### v1.0.1 (2026-05-06)
 - ✨ **Nové:** Live BTC cena z CoinGecko API (auto-refresh 5 min)
@@ -113,7 +120,7 @@ Když upravíš kód:
 
 1. Změň verzi cache v `service-worker.js`:
    ```javascript
-   const CACHE_NAME = 'btc-cykly-v1.0.1';  // zvedni číslo
+   const CACHE_NAME = 'btc-cykly-v1.1.0';  // zvedni číslo
    ```
 2. Push do GitHubu (drag & drop přepíše soubor, nebo `git push`)
 3. Uživatelé dostanou novou verzi při dalším otevření aplikace
@@ -156,7 +163,7 @@ Když upravíš kód:
 
 ## 🎯 Aktuální verze
 
-**v1.0.1** — Live BTC cena, ATH zobrazení, ATH notifikace
+**v1.1.0** — Historie ceny BTC v grafu Power Law, přehled období pod supportem
 
 > Detailní changelog viz nahoře v sekci 📜 Changelog.
 

@@ -5,6 +5,28 @@ Všechny významné změny v projektu BTC Cykly jsou zaznamenány zde.
 Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/),
 projekt používá [Semantic Versioning](https://semver.org/lang/cs/).
 
+## [1.1.0] - 2026-11-11
+
+### ✨ Přidáno
+- Graf Power Law zobrazuje skutečnou historii ceny BTC od 18. 8. 2010 (týdenní data vestavěná v aplikaci, funguje offline)
+- Poslední rok historie se doplňuje denními cenami z CoinGecko (cache 12 hodin)
+- Zvýraznění míst, kde cena klesla pod support (červené pruhy a body v grafu)
+- Karta „Cena pod supportem" s přehledem období, délkou a hloubkou propadu
+- Tooltip grafu ukazuje historickou cenu a její odchylku od fair value
+
+### 🎨 Vylepšeno
+- Graf Power Law je čitelný i ve světlém tématu (mřížka, popisky, čára DNES)
+- Značky halvingů v grafu odpovídají skutečným datům halvingů
+
+### 🐛 Opraveno
+- Windows: nastavení „zavírat do tray" se po restartu aplikace nepřeneslo do backendu
+- Tray menu „Aktualizovat" obnoví data bez znovunačtení celé stránky
+- Power Law už neposílá vlastní dotaz na cenu, když ji má karta s živou cenou
+
+### 🔧 Technické
+- Verze sjednocena na 1.1.0 včetně `package.json`
+- Cache verze v service workeru: `btc-cykly-v1.1.0`
+
 ## [1.0.1] - 2026-05-06
 
 ### ✨ Přidáno

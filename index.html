@@ -300,6 +300,7 @@ tr:nth-child(even) { background: rgba(255,255,255,0.02); }
   background: rgba(0,0,0,0.92); border: 1px solid var(--orange);
   border-radius: 8px; padding: 8px 12px;
   font-family: var(--font-mono); font-size: 11px;
+  --text: #f2f2f2; --text-dim: #aaa;  /* tooltip je vždy tmavý, i ve světlém tématu */
   color: var(--text); opacity: 0; transition: opacity 0.15s;
   z-index: 10; min-width: 160px;
 }
@@ -315,7 +316,23 @@ tr:nth-child(even) { background: rgba(255,255,255,0.02); }
 .pl-legend .l-fair::before { background: var(--orange); }
 .pl-legend .l-sup::before { background: #4CAF50; }
 .pl-legend .l-res::before { background: #FF5252; }
-.pl-legend .l-now::before { background: #fff; }
+.pl-legend .l-now::before { background: var(--pl-ink); }
+.pl-legend .l-price::before { background: var(--pl-price); height: 3px; width: 14px; }
+.pl-legend .l-breach::before { background: #FF1744; border-radius: 50%; }
+.pl-chart-wrap { --pl-ink: #fff; --pl-grid: rgba(255,255,255,0.07); --pl-axis: #999; --pl-price: #B3E5FC; }
+body.theme-light .pl-chart-wrap { --pl-ink: #1a1a1a; --pl-grid: rgba(0,0,0,0.10); --pl-axis: #555; --pl-price: #01579B; }
+.pl-chart .pl-grid { stroke: var(--pl-grid); }
+.pl-chart .pl-axis-t { fill: var(--pl-axis); }
+.pl-chart .pl-ink-s { stroke: var(--pl-ink); }
+.pl-chart .pl-ink-f { fill: var(--pl-ink); }
+.pl-chart .pl-price { stroke: var(--pl-price); }
+.pl-tooltip .tt-breach { color: #FF5252; font-weight: 700; margin-top: 3px; }
+.breach-table { width: 100%; min-width: 0; display: table; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+.breach-table th { text-align: left; font-weight: 600; color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; padding: 6px 8px; border-bottom: 1px solid var(--card-border); }
+.breach-table td { padding: 7px 8px; border-bottom: 1px solid var(--card-border); font-family: var(--font-mono); }
+.breach-table td.depth { color: #FF5252; font-weight: 700; }
+.breach-summary { font-size: 14px; line-height: 1.6; color: var(--text); }
+.breach-note { font-size: 11px; color: var(--text-muted); margin-top: 10px; line-height: 1.5; }
 
 /* Halving */
 .hv-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
@@ -554,6 +571,7 @@ footer { text-align: center; padding: 18px 0; font-size: 10px; color: var(--text
         Parametry aktualizované dle live fit (charts.bitbo.io):
         <br><code style="color:var(--orange);font-family:var(--font-mono);">Price = 10<sup>−16.92</sup> × (dny od 3.1.2009)<sup>5.82</sup></code>
         <br><span style="font-size:11px;opacity:0.8;">Support ≈ fair × 0.355 (dno koridoru) · Resistance ≈ fair × 3.54 (top koridoru)</span>
+        <br><span style="font-size:11px;opacity:0.8;">Graf ukazuje i skutečnou historii ceny BTC od roku 2010 – červeně jsou označená místa, kde cena klesla pod support.</span>
       </p>
     </div>
 
@@ -590,17 +608,27 @@ footer { text-align: center; padding: 18px 0; font-size: 10px; color: var(--text
         <div class="tt-row"><span class="tt-label">Fair value:</span><span class="tt-val orange" id="ttFair">—</span></div>
         <div class="tt-row"><span class="tt-label">Support:</span><span class="tt-val green" id="ttSup">—</span></div>
         <div class="tt-row"><span class="tt-label">Resistance:</span><span class="tt-val red" id="ttRes">—</span></div>
+        <div class="tt-row" id="ttHistRow" style="border-top:1px solid rgba(255,255,255,0.1);margin-top:4px;padding-top:4px;"><span class="tt-label">Cena BTC:</span><span class="tt-val" id="ttHist">—</span></div>
+        <div class="tt-row" id="ttHistDevRow"><span class="tt-label">Vůči fair:</span><span class="tt-val" id="ttHistDev">—</span></div>
+        <div class="tt-breach" id="ttBreach" style="display:none;">⚠ pod supportem</div>
         <div class="tt-row" id="ttNowRow" style="border-top:1px solid rgba(255,255,255,0.1);margin-top:4px;padding-top:4px;"><span class="tt-label">Aktuální:</span><span class="tt-val" id="ttNow">—</span></div>
       </div>
       <div class="pl-legend">
         <span class="l-fair">Fair value</span>
         <span class="l-sup">Support (0.355×)</span>
         <span class="l-res">Resistance (3.54×)</span>
+        <span class="l-price">Cena BTC (historie)</span>
+        <span class="l-breach">Pod supportem</span>
         <span class="l-now">Dnes</span>
       </div>
       <div style="text-align:center;font-size:10px;color:var(--text-muted);margin-top:6px;">
         💡 Najeď myší na graf pro detail · Posuvníky mění zobrazovaný úsek · Kolečko myši = zoom
       </div>
+    </div>
+
+    <div class="card" id="plBreachCard" style="margin-top:16px;">
+      <h3 style="color:var(--orange);font-size:13px;text-transform:uppercase;letter-spacing:2px;margin-bottom:10px;">📉 Cena pod supportem (historie)</h3>
+      <div id="plBreachBody"></div>
     </div>
 
     <div class="card" style="margin-top:16px;">
@@ -801,7 +829,7 @@ footer { text-align: center; padding: 18px 0; font-size: 10px; color: var(--text
 
     <div class="settings-group">
       <h4>ℹ️ Aplikace</h4>
-      <div class="sg-row"><span>Verze</span><span style="font-family:var(--font-mono);color:var(--orange);">1.0.1</span></div>
+      <div class="sg-row"><span>Verze</span><span style="font-family:var(--font-mono);color:var(--orange);">1.1.0</span></div>
       <div class="sg-row"><span>Build</span><span style="font-family:var(--font-mono);color:var(--text-dim);" id="buildDate">—</span></div>
       <div class="sg-row" style="flex-direction:column;align-items:flex-start;gap:8px;">
         <span class="sg-label">Klávesové zkratky</span>
@@ -818,7 +846,7 @@ footer { text-align: center; padding: 18px 0; font-size: 10px; color: var(--text
   </section>
 
   <footer>
-    <p>BTC Cykly <strong style="color:var(--orange)">v1.0.1</strong> · Orientační model · Nejde o finanční poradenství</p>
+    <p>BTC Cykly <strong style="color:var(--orange)">v1.1.0</strong> · Orientační model · Nejde o finanční poradenství</p>
     <p>Data jsou přibližné průměry z historických cyklů · Power Law dle G. Santostasi</p>
   </footer>
 </div>
@@ -864,7 +892,97 @@ const PL_N = 5.82;
 const PL_SUP_MUL = 0.355;  // dno koridoru (~-0.45 log10)
 const PL_RES_MUL = 3.54;   // top koridoru (~+0.55 log10)
 
+// ========================= HISTORIE CENY BTC =========================
+// Týdenní data [minimum, závěr, minimum, závěr, ...] od BTC_HIST_START do BTC_HIST_LAST.
+// Zdroj: blockchain.info (denní ceny v USD). Minimum týdne je přepočtené na poslední den
+// týdne podle exponentu PL_N, takže ho lze přímo porovnat se supportem k tomuto dni.
+// Při změně PL_N nebo pro doplnění novějších dat je potřeba pole vygenerovat znovu.
+const BTC_HIST_START = '2010-08-18';
+const BTC_HIST_LAST = '2026-11-10';
+const BTC_HIST = [0.07,0.07,0.06117,0.07,0.06,0.06,0.06,0.06,0.06,0.06,0.06,0.06,0.06,0.06,0.06277,0.12,0.1,0.1,0.1045,0.16,0.1933,0.2,0.2212,0.36,0.2484,0.28,0.28,0.28,0.28,0.28,0.23,0.23,0.2152,0.23,0.2415,0.27,0.2541,0.27,0.3,0.3,0.3097,0.33,0.3459,0.4,0.3639,0.44,0.4365,0.61,0.8042,0.9,0.9523,1.08,0.88,0.88,0.9306,0.95,0.91,0.91,0.9,0.9,0.79,0.79,0.84,0.84,0.77,0.77,0.7511,0.81,0.9594,1.2,1.241,1.71,1.855,3.49,3.617,4.24,5.634,8.47,6.699,7.39,7.566,9.12,9.853,19.19,23.03,23.66,16.91,16.91,15.78,17.89,15.65,15.65,15.07,15.07,13.93,13.93,14.11,14.66,13.53,13.53,9.639,9.66,10.11,11.77,11.5,11.5,9.311,9.4,8.27,8.27,6.567,6.88,5.079,5.89,5.38,5.38,5.056,5.06,4.23,4.23,3.55,3.55,2.547,3.16,3.004,3.38,3.057,3.07,2.95,2.95,2.3,2.3,2.439,2.64,2.96,2.96,3.09,3.33,3.265,3.89,4.014,4.25,4.223,5.45,5.543,7.13,6.882,7.14,6.444,6.47,5.61,5.61,5.77,5.77,5.69,5.69,4.402,4.5,4.598,5.08,4.859,5.04,5,5.07,5.23,5.23,4.723,4.74,4.913,5.06,4.82,4.82,4.99,4.99,5.209,5.21,5,5,5.1,5.1,5.034,5.05,5.14,5.14,5.16,5.16,5.295,5.33,5.58,5.58,5.922,6.48,6.45,6.45,6.66,6.75,6.752,6.98,7.436,8.58,9.091,9.14,8.99,9.22,9.716,11.23,11.37,11.94,10.45,10.45,10.39,11.97,10.3,10.52,10.87,11.14,11.53,11.99,12.28,12.28,12.53,12.58,12.14,12.14,12.02,12.02,11.85,11.86,10.73,10.93,10.71,10.9,11.04,11.17,11.3,11.81,12.12,12.62,12.71,12.75,13.41,13.57,13.47,13.47,13.45,13.45,13.58,13.58,13.58,13.61,14.17,14.34,14.88,17.13,17.85,18.77,20.25,20.99,21.41,24.65,24.77,26.98,29.99,30.4,31.87,36.4,41.59,48.2,45.34,52.12,60.9,74.1,80.59,104,120,187,68.1,68.1,69.53,127,129.5,144.5,97.87,112.3,114.2,118,114.5,122,125.3,129.8,122,122,100.6,106.1,100.3,102,103,103,87,87,69.59,76.49,78.34,98.4,90.02,91.99,94.78,101.5,105.6,106.7,103.7,106.6,99.27,102.8,107.1,111.8,120,130.1,118.6,120.5,124.5,126.2,122.7,122.7,125.5,126.2,105.6,123.8,126.6,135.2,140.5,179.8,180.8,206.9,205,229.9,257.6,343.6,361.9,660.2,557.8,814.6,935.9,1044,710.5,894,690,690,530.4,660,665.7,736.5,746.1,915.7,805.2,823,799.5,827.8,747.6,747.6,800.5,808.5,685.1,688.7,617.6,630,542.7,542.7,558.1,682,626.2,629.3,624.7,624.7,561.3,585.6,457.5,457.5,445.8,450,373.5,459.6,486.5,498.4,440.1,442.4,433,433,435.7,442.4,447,448,496.9,584.9,575.8,662,648.8,648.8,575.6,586,588.2,588.2,569,639,624.4,624.4,621.2,621.2,622.2,622.2,589.9,589.9,571.5,588.5,574,574,474.9,474.9,498.1,501.6,476.4,476.4,467.9,467.9,470.8,470.8,399,399.9,373.9,373.9,324.8,327.6,339.6,392,381.5,381.5,348.9,350.9,325.2,326.5,335.7,365.8,375.5,388.9,353.1,374.6,371.8,377.4,363,363,348,348,315.6,332,313.4,313.4,263.9,274.3,267,267,174.3,216,214.1,274.4,220.4,238,219.3,219.9,222.5,234.5,236.6,238.9,239.1,275.9,273.6,287,283.7,289.3,260.3,266,243,248,247.4,255.2,223,223,219.5,224.3,220.1,227,228.5,238.2,231.9,240.9,232.8,232.8,234.9,235.6,223.5,223.5,222.8,227.7,230.6,236,244.2,246.8,243.2,256.1,257.2,268.5,269.8,291.9,276.1,279,279.3,293.9,281.1,281.1,263.5,264.5,256.7,256.7,211,211,225.3,230.2,229.4,240.5,229.7,229.7,226.3,226.3,232.2,239.1,239,240.6,245.3,245.5,253.5,263.6,271.1,286.7,299.5,361.5,371.9,380.6,312.6,330.7,323.5,323.5,324.1,377.3,363.2,394.9,419,443.8,438.4,438.4,419,421,431.8,434.2,434.2,448,366.2,385.5,382.6,390.9,368.7,372,371.6,371.6,378.5,399.2,412.5,436.8,424.9,436.8,400.9,412.4,411.7,415,410.7,411.9,418.7,422.9,418.3,419.7,420.4,422.6,427.4,427.4,441.7,462.5,443.8,443.8,451.7,460.7,454,454,439.4,443,449.9,526.4,538.9,583.7,579.3,704.5,694,724,599.2,651.9,642.8,682,643.9,649.3,659.8,673.5,653.9,655,605.6,605.6,537.5,591.7,565.7,565.7,575.1,583.3,569.6,571.5,575.6,605,605.3,608,606.6,608.7,599,606.8,609.1,613,614.3,614.8,635.5,635.5,632.9,643.9,659.5,697,689.3,703.2,701.8,705,720.4,737,728.8,729.5,738.9,750.6,768.2,778,782.1,791,811.2,896.8,941.5,1013,896.9,896.9,788.7,830.6,894.2,920,894.1,920,975.6,1024,993.1,1001,1019,1084,1138,1194,1205,1280,1111,1241,971.5,1032,933.3,1041,1043,1147,1145,1210,1163,1177,1215,1254,1287,1391,1464,1651,1703,1718,1729,2100,2056,2290,2230,2699,2657,2657,2443,2600,2430,2430,2430,2550,2327,2327,1915,2220,2286,2760,2540,2863,2725,3380,3371,4316,3986,3986,4136,4377,4203,4203,4199,4199,3240,4092,3625,3932,3924,4394,4250,4774,4829,5764,5623,5901,5571,6133,6486,6961,5901,6494,6664,8243,8101,9717,9733,11590,11790,16730,16400,18910,13580,13740,12660,13370,14950,14960,13380,13550,10770,10770,10950,11190,6925,6925,7652,8896,8618,11170,9599,10320,10420,11440,8808,9130,7912,8606,8146,8146,6839,7065,6669,6784,6920,8069,7989,8953,8946,9240,9168,9369,8440,8672,8119,8397,7106,7106,7450,7495,6774,6879,6353,6712,6090,6250,5918,6626,6585,6683,6251,6733,7372,7715,7993,8171,6937,6937,6170,6252,6252,6263,6407,6901,7033,7265,6204,6307,6254,6254,6405,6583,6496,6587,6537,6641,6248,6599,6494,6494,6308,6308,6363,6438,6385,6385,4849,4849,3793,3793,3866,3894,3442,3473,3242,3557,3750,4075,3662,3738,3844,4032,3538,3682,3540,3540,3449,3449,3452,3452,3416,3629,3623,3911,3773,3848,3731,3731,3881,3881,3908,3999,3936,3936,3985,4153,4929,5269,5036,5036,5245,5377,5228,5261,5319,5684,5809,7823,7287,8007,7685,8770,8135,8135,7652,8020,7990,9327,9160,11020,10580,10580,10900,12310,10200,10870,9483,10320,9501,9501,9676,11790,11320,11390,10090,10920,10150,10360,9541,10390,10310,10310,10190,10270,9683,9683,8069,8308,7881,8212,8263,8354,7984,8223,7476,9219,9202,9418,8718,8718,8176,8176,6918,7130,7227,7310,7246,7337,6880,6880,6670,7322,7220,7220,6985,7759,7863,8105,8626,8626,8351,8896,9285,9285,9241,9855,9704,9704,9662,9664,8546,8913,7932,7932,4858,5026,5404,6502,5894,6405,6483,7343,6858,6858,6671,6840,6911,7791,7831,8886,8617,8617,8889,9719,8743,8900,8917,10200,9606,9783,9338,9427,9298,9692,9029,9185,9102,9349,9238,9238,9164,9164,9471,11040,11030,11240,11290,11890,11490,12290,11570,11760,11360,11660,10190,10370,10200,10670,10430,10430,10300,10690,10580,10790,10690,11540,11370,11760,12020,13080,13380,13580,14140,15330,15440,16730,17820,18400,17210,19710,18750,19180,18100,19280,19600,22750,23410,27040,27600,32040,34320,35540,34280,36630,30960,32240,30620,33520,35810,46360,45170,47950,49550,54120,45170,49620,48700,52300,55310,55750,54200,54200,51680,57630,57230,59050,56310,59830,55700,55700,49140,54060,53860,57210,53660,55880,43600,43600,34800,38730,34740,37310,33510,33510,33710,40530,31690,31690,31760,34460,33710,33750,33050,33160,30820,30820,30020,37320,39190,39190,38430,46330,44640,45980,44990,49520,47070,47070,47510,52680,44970,44970,42900,42900,40930,42240,41320,49140,51890,57450,56670,61970,60920,63070,58900,61030,61300,67560,63580,63580,56300,56300,53790,57830,49380,50560,46760,46760,46340,46910,48930,50690,46420,46440,41680,41850,42250,42250,35160,36680,37050,38520,37140,43830,42160,42580,37030,37030,37520,43230,38030,38030,37870,39680,39610,41070,42680,47120,45760,46610,39490,39490,39760,40810,39510,40470,37750,38510,30180,30180,29070,29830,28850,29070,28680,31720,29790,31350,22430,22430,19020,20580,20070,20700,19270,20210,19950,19950,19430,22540,21300,21300,21420,23300,22710,23820,23320,24100,20920,21400,19570,20290,19790,19790,18940,22390,19440,19540,18620,19230,19070,19630,19130,19130,19110,19550,19140,19340,20240,20500,20270,20600,15950,16590,15760,15760,16210,16210,16550,16970,16930,17210,16440,16440,16840,16920,16560,16670,16780,17190,17560,21190,20790,22920,22790,22840,22760,22760,21710,21790,22360,24830,23230,23500,22400,22410,20290,24210,24510,27790,27140,27140,27460,27800,28020,29660,29450,29450,27360,27520,28090,28090,27690,27690,26850,27190,26790,26850,26470,27740,25750,25750,25900,25900,25270,26850,28510,30270,30250,31150,30050,30410,30140,30140,29180,29180,29230,29230,29070,29180,29320,29410,26120,26120,26060,26110,25810,25810,25160,25160,26000,26760,26280,26290,26380,27530,27540,27580,26870,28520,28480,33060,34020,34500,34850,35040,35670,36500,35780,37480,36040,37250,37870,41990,41240,41240,41260,41260,42530,43600,42220,44180,43080,46970,41760,42500,39510,39510,40090,43270,42620,42650,43350,49960,50050,51780,50890,54530,57440,68380,64200,72120,65440,67600,62310,69960,69700,69700,65860,71650,63440,63440,61600,66840,63180,63830,58570,63160,60930,62910,61940,71440,68220,69370,67690,68800,69440,69510,66200,66480,60280,60280,60500,62850,55910,56710,57590,64860,64230,67600,65690,66780,53980,53980,55320,59350,57760,59480,59390,62860,57380,59110,54120,57060,57640,58190,60670,63330,63320,63320,60950,62240,60510,66050,67360,67360,66840,69910,67810,67810,69800,88720,87640,90540,92930,93000,92520,95860,96520,97470,97230,106100,94720,94720,92650,92650,93970,102300,92860,94500,97100,102000,102100,102100,97770,101400,96580,97460,95770,95770,91540,91540,84530,86080,78560,78560,81400,84040,83210,87510,82420,82530,78450,79190,76720,84550,84120,87520,93870,95000,94400,94730,97390,102800,103400,105600,107400,109500,104300,105900,102000,110300,105700,106800,101100,105400,106700,107100,106300,108300,109600,119900,117400,117400,118000,118000,112700,115100,114800,118700,116300,116300,110100,110100,108300,109300,110400,112100,112200,115400,112800,112800,109500,114400,114700,124800,111000,115200,106800,110600,108100,114100,106500,106500,101700,106000,92090,92090,84840,88280,86320,86320,89400,90640,86420,86420,85780,88490,87120,87120,87900,93880,90550,91190,92550,92550,86650,88250,76950,78680,63050,70130,66450,68840,64620,64620,64400,68780,66000,68450,70310,74860,67910,70890,66020,66690,67120,68860,70830,74500,73930,75870,76780,77370,76130,79830,80310,81740,76950,76950,75670,77280,71330,71330,60970,63090,61730,66290,63130,63950,59550,60140,58860,64000,62240,62240,64020,65210,63710,63710,62870,63460,63920,63920,62880,64500,65040,78980,77760,78550,77650,79090,76820,78170,76020,86610,83470,83470,83950,85770,81750,81750,81530,81840,80000,80000,76680,76680,74770,75220];
+const HIST_CACHE_KEY = 'btcCyklyHistRecent';
+const HIST_CACHE_MS = 12 * 3600 * 1000;
+const COINGECKO_HIST_URL = 'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=365&interval=daily';
+const HIST_GAP_DAYS = 10;      // větší mezera mezi body = čára se přeruší
+const BREACH_MERGE_DAYS = 21;  // průrazy bližší než 3 týdny se počítají jako jedno období
+let histRecent = [];           // denní body po BTC_HIST_LAST (z CoinGecko)
+let histAll = null;            // sloučená historie: { d: den od genesis, w: šířka bodu ve dnech, l: minimum, c: závěr }
+
 // ========================= UTIL =========================
+const histLastMs = () => Date.parse(BTC_HIST_LAST + 'T00:00:00Z');
+
+function getPriceHistory() {
+  if (histAll) return histAll;
+  const t0 = Date.parse(BTC_HIST_START + 'T00:00:00Z');
+  const tLast = histLastMs();
+  const pts = [];
+  for (let i = 0; i < BTC_HIST.length / 2; i++) {
+    const t = Math.min(t0 + (i * 7 + 6) * 864e5, tLast);
+    pts.push({ d: (t - GENESIS) / 864e5, w: 6, l: BTC_HIST[2 * i], c: BTC_HIST[2 * i + 1] });
+  }
+  histAll = pts.concat(histRecent);
+  return histAll;
+}
+
+function setHistRecent(prices) {
+  const tLast = histLastMs();
+  histRecent = (prices || [])
+    .filter(p => Array.isArray(p) && p[0] > tLast + 432e5 && p[1] > 0)
+    .map(p => ({ d: (p[0] - GENESIS) / 864e5, w: 0, l: p[1], c: p[1] }));
+  histAll = null;
+}
+
+// Doplní denní ceny za dobu po BTC_HIST_LAST (CoinGecko zdarma dává max. 365 dní zpět)
+async function loadRecentHistory() {
+  try {
+    const c = JSON.parse(localStorage.getItem(HIST_CACHE_KEY) || 'null');
+    if (c && Array.isArray(c.prices)) {
+      setHistRecent(c.prices);
+      if (Date.now() - c.ts < HIST_CACHE_MS) return;
+    }
+  } catch(e) {}
+  try {
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), 8000);
+    const r = await fetch(COINGECKO_HIST_URL, { signal: ctrl.signal });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    const tLast = histLastMs();
+    const prices = (j.prices || []).filter(p => p[0] > tLast).map(p => [p[0], Math.round(p[1])]);
+    setHistRecent(prices);
+    try { localStorage.setItem(HIST_CACHE_KEY, JSON.stringify({ ts: Date.now(), prices })); } catch(e) {}
+  } catch(e) { console.warn('[Hist] doplnění historie selhalo:', e); }
+}
+
+// Souvislá období, kdy cena klesla pod support
+function findSupportBreaches() {
+  const out = [];
+  let cur = null;
+  for (const p of getPriceHistory()) {
+    const sup = powerLaw(p.d) * PL_SUP_MUL;
+    if (p.l >= sup) continue;
+    const depth = (p.l / sup - 1) * 100;
+    if (cur && p.d - cur.end <= BREACH_MERGE_DAYS) {
+      cur.end = p.d;
+      if (depth < cur.depth) cur.depth = depth;
+    } else {
+      cur = { start: p.d - p.w, end: p.d, depth };
+      out.push(cur);
+    }
+  }
+  return out;
+}
+
+function nearestHistPoint(day) {
+  const h = getPriceHistory();
+  let best = null, bestDist = Infinity;
+  for (const p of h) {
+    const dist = Math.abs(p.d - day);
+    if (dist < bestDist) { best = p; bestDist = dist; }
+  }
+  return best && bestDist <= Math.max(4, best.w + 1) ? best : null;
+}
+
 const addDays = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n); return r; };
 const daysBetween = (a, b) => Math.round((b - a) / 864e5);
 const fmt = d => new Date(d).toLocaleDateString('cs-CZ', {day:'2-digit',month:'2-digit',year:'numeric'});
@@ -969,6 +1087,8 @@ let cachedPriceAge = 0;
 async function fetchBtcPrice() {
   // 10 min cache
   if (cachedPrice && Date.now() - cachedPriceAge < 600000) return cachedPrice;
+  // Karta s živou cenou už cenu stahuje – nepouštěj další dotaz na CoinGecko
+  if (livePriceState.cur) return livePriceState.cur;
   try {
     const ctrl = new AbortController();
     setTimeout(() => ctrl.abort(), 5000);
@@ -997,7 +1117,10 @@ async function renderPowerLaw() {
   document.getElementById('plSup').textContent = fmtMoney(sup);
   document.getElementById('plRes').textContent = fmtMoney(res);
 
-  const price = await fetchBtcPrice();
+  // Nejdřív vykresli z vestavěných dat, pak dotáhni živou cenu a poslední rok historie
+  drawPowerLawChart();
+  renderBreachSummary();
+  const [price] = await Promise.all([fetchBtcPrice(), loadRecentHistory()]);
   plLastPrice = price;
   if (price != null) {
     document.getElementById('plNow').textContent = fmtMoney(price);
@@ -1011,6 +1134,39 @@ async function renderPowerLaw() {
   }
 
   drawPowerLawChart();
+  renderBreachSummary();
+}
+
+function renderBreachSummary() {
+  const body = document.getElementById('plBreachBody');
+  if (!body) return;
+  const br = findSupportBreaches();
+  const since = fmt(new Date(BTC_HIST_START + 'T00:00:00Z'));
+  const note = `<div class="breach-note">Počítáno z denních cen od ${since} (bez vnitrodenních výkyvů). Support = fair value × ${PL_SUP_MUL}. Průrazy bližší než 3 týdny jsou spojené do jednoho období.</div>`;
+  if (!br.length) {
+    body.innerHTML = `<div class="breach-summary">✅ Od ${since} denní cena BTC pod support <strong>nikdy neklesla</strong>.</div>${note}`;
+    return;
+  }
+  const dayToDate = d => fmt(new Date(GENESIS.getTime() + d * 864e5));
+  const lenDays = b => Math.max(1, Math.round(b.end - b.start) + 1);
+  const deepest = br.reduce((a, b) => b.depth < a.depth ? b : a);
+  const last = br[br.length - 1];
+  const obd = br.length === 1 ? 'období' : 'obdobích';
+  const rows = br.slice().reverse().map(b => `<tr>
+      <td>${dayToDate(b.start)} – ${dayToDate(b.end)}</td>
+      <td>${lenDays(b)} dní</td>
+      <td class="depth">${b.depth.toFixed(1).replace('.', ',')} %</td>
+    </tr>`).join('');
+  body.innerHTML = `
+    <div class="breach-summary">
+      ⚠️ Ano – cena BTC byla pod supportem v <strong>${br.length} ${obd}</strong>.
+      Naposledy <strong>${dayToDate(last.end)}</strong>,
+      nejhlouběji <strong style="color:#FF5252;">${deepest.depth.toFixed(1).replace('.', ',')} %</strong> pod supportem (${dayToDate(deepest.start)} – ${dayToDate(deepest.end)}).
+    </div>
+    <div class="table-wrap"><table class="breach-table">
+      <thead><tr><th>Období</th><th>Délka</th><th>Propad</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>${note}`;
 }
 
 function computePlRange() {
@@ -1032,8 +1188,15 @@ function drawPowerLawChart() {
   const startDay = daysSinceGenesis(startDate);
   const endDay   = daysSinceGenesis(endDate);
 
-  const minPrice = Math.max(0.01, powerLaw(startDay) * PL_SUP_MUL * 0.5);
-  const maxPrice = powerLaw(endDay) * PL_RES_MUL * 1.5;
+  let minPrice = Math.max(0.01, powerLaw(startDay) * PL_SUP_MUL * 0.5);
+  let maxPrice = powerLaw(endDay) * PL_RES_MUL * 1.5;
+  // Historie ceny ve výřezu (s okrajem, ořez řeší clipPath) – rozšíří osu Y, aby se vešla
+  const hist = getPriceHistory().filter(p => p.d >= startDay - 30 && p.d <= endDay + 30);
+  hist.forEach(p => {
+    if (p.d < startDay || p.d > endDay) return;
+    if (p.l * 0.7 < minPrice) minPrice = Math.max(0.01, p.l * 0.7);
+    if (p.c * 1.3 > maxPrice) maxPrice = p.c * 1.3;
+  });
   const logMin = Math.log10(minPrice), logMax = Math.log10(maxPrice);
 
   const xScale = day => pad.l + ((day - startDay) / (endDay - startDay)) * plotW;
@@ -1078,9 +1241,9 @@ function drawPowerLawChart() {
     const p = Math.pow(10, pow10);
     if (p < minPrice || p > maxPrice) continue;
     const y = yScale(p);
-    yAxis += `<line x1="${pad.l}" y1="${y}" x2="${W-pad.r}" y2="${y}" stroke="rgba(255,255,255,0.06)" />`;
+    yAxis += `<line x1="${pad.l}" y1="${y}" x2="${W-pad.r}" y2="${y}" class="pl-grid" />`;
     const label = p >= 1e6 ? '$' + (p/1e6) + 'M' : p >= 1000 ? '$' + (p/1000) + 'k' : p >= 1 ? '$' + p : '$' + p.toFixed(2);
-    yAxis += `<text x="${pad.l-6}" y="${y+3}" text-anchor="end" fill="#999" font-family="monospace" font-size="10">${label}</text>`;
+    yAxis += `<text x="${pad.l-6}" y="${y+3}" text-anchor="end" class="pl-axis-t" font-family="monospace" font-size="10">${label}</text>`;
   }
 
   // X osa – roky (rozteč podle rozsahu)
@@ -1090,20 +1253,19 @@ function drawPowerLawChart() {
   for (let y = firstYear; y <= endYear; y += yearStep) {
     const d = daysSinceGenesis(new Date(y + '-01-01'));
     const x = xScale(d);
-    xAxis += `<line x1="${x}" y1="${pad.t}" x2="${x}" y2="${H-pad.b}" stroke="rgba(255,255,255,0.04)" />`;
-    xAxis += `<text x="${x}" y="${H-pad.b+18}" text-anchor="middle" fill="#999" font-family="monospace" font-size="10">${y}</text>`;
+    xAxis += `<line x1="${x}" y1="${pad.t}" x2="${x}" y2="${H-pad.b}" class="pl-grid" />`;
+    xAxis += `<text x="${x}" y="${H-pad.b+18}" text-anchor="middle" class="pl-axis-t" font-family="monospace" font-size="10">${y}</text>`;
   }
 
   // Halving markers (pouze jsou-li viditelné)
-  const halvings = [
-    { y: 2012, label: 'H1' }, { y: 2016, label: 'H2' },
-    { y: 2020, label: 'H3' }, { y: 2024, label: 'H4' },
-    { y: 2028, label: 'H5' }, { y: 2032, label: 'H6' },
-    { y: 2036, label: 'H7' }, { y: 2040, label: 'H8' }
-  ];
+  // Skutečná data proběhlých halvingů + odhad dalších (~1458 dní)
+  const halvings = HALVINGS.map(h => ({ date: h.date, label: 'H' + h.n }));
+  for (let nd = estimateNextHalving(), nn = HALVINGS.length + 1; nd.getFullYear() <= 2050; nd = addDays(nd, 1458), nn++) {
+    halvings.push({ date: nd, label: 'H' + nn });
+  }
   let halvingMarkers = '';
   halvings.forEach(h => {
-    const d = daysSinceGenesis(new Date(h.y + '-04-01'));
+    const d = daysSinceGenesis(h.date);
     if (d < startDay || d > endDay) return;
     const x = xScale(d);
     halvingMarkers += `<line x1="${x}" y1="${pad.t}" x2="${x}" y2="${H-pad.b}" stroke="rgba(255,215,0,0.15)" stroke-width="1" stroke-dasharray="2 2"/>`;
@@ -1113,9 +1275,38 @@ function drawPowerLawChart() {
   // DNES čára (pokud je ve výseku)
   let todayLine = '';
   if (todayVisible) {
-    todayLine = `<line x1="${todayX}" y1="${pad.t}" x2="${todayX}" y2="${H-pad.b}" stroke="#fff" stroke-width="1.5" stroke-dasharray="3 3" />
-      <text x="${todayX}" y="${pad.t-4}" text-anchor="middle" fill="#fff" font-size="10" font-family="monospace" font-weight="700">DNES</text>`;
+    todayLine = `<line x1="${todayX}" y1="${pad.t}" x2="${todayX}" y2="${H-pad.b}" class="pl-ink-s" stroke-width="1.5" stroke-dasharray="3 3" />
+      <text x="${todayX}" y="${pad.t-4}" text-anchor="middle" class="pl-ink-f" font-size="10" font-family="monospace" font-weight="700">DNES</text>`;
   }
+
+  // Historická cena BTC (týdenní závěry + denní data za poslední rok)
+  const clip = `<defs><clipPath id="plClip"><rect x="${pad.l}" y="${pad.t}" width="${plotW}" height="${plotH}" /></clipPath></defs>`;
+  let histPath = '', prevD = null;
+  hist.forEach(p => {
+    const brk = prevD === null || p.d - prevD - p.w > HIST_GAP_DAYS;
+    histPath += (brk ? 'M' : 'L') + xScale(p.d).toFixed(1) + ' ' + yScale(p.c).toFixed(1) + ' ';
+    prevD = p.d;
+  });
+  if (histPath && plLastPrice && prevD !== null && today > prevD && today - prevD <= HIST_GAP_DAYS && today <= endDay + 30) {
+    histPath += 'L' + todayX.toFixed(1) + ' ' + yScale(plLastPrice).toFixed(1);
+  }
+  const histLine = histPath
+    ? `<path d="${histPath}" class="pl-price" stroke-width="1.6" fill="none" stroke-linejoin="round" stroke-linecap="round" clip-path="url(#plClip)" />`
+    : '';
+
+  // Zvýraznění míst, kde cena klesla pod support: svislý pruh přes období + tečky na minimech
+  let breachMarks = '';
+  findSupportBreaches().forEach(b => {
+    if (b.end < startDay || b.start > endDay) return;
+    const x1 = xScale(Math.max(b.start, startDay)), x2 = xScale(Math.min(b.end, endDay));
+    const w = Math.max(4, x2 - x1);
+    breachMarks += `<rect x="${((x1 + x2) / 2 - w / 2).toFixed(1)}" y="${pad.t}" width="${w.toFixed(1)}" height="${plotH}" fill="rgba(255,23,68,0.16)" clip-path="url(#plClip)" />`;
+  });
+  hist.forEach(p => {
+    if (p.d < startDay || p.d > endDay) return;
+    if (p.l >= powerLaw(p.d) * PL_SUP_MUL) return;
+    breachMarks += `<circle cx="${xScale(p.d).toFixed(1)}" cy="${yScale(p.l).toFixed(1)}" r="3" fill="#FF1744" stroke="#fff" stroke-width="0.6" />`;
+  });
 
   // Bod aktuální ceny
   let pricePoint = '';
@@ -1134,15 +1325,19 @@ function drawPowerLawChart() {
     <circle id="plHoverFair" r="4" fill="#F7931A" />
     <circle id="plHoverSup" r="3" fill="#4CAF50" />
     <circle id="plHoverRes" r="3" fill="#FF5252" />
+    <circle id="plHoverPrice" r="4" fill="#fff" stroke="#01579B" stroke-width="1.5" style="display:none;" />
   </g>`;
 
   svg.innerHTML = `
+    ${clip}
     ${band}
     ${yAxis}${xAxis}
     ${halvingMarkers}
     ${makeLine(PL_SUP_MUL, '#4CAF50', true, 1.4)}
     ${makeLine(PL_RES_MUL, '#FF5252', true, 1.4)}
     ${makeLine(1, '#F7931A', false, 2.2)}
+    ${histLine}
+    ${breachMarks}
     ${todayLine}
     ${pricePoint}
     ${hoverLine}
@@ -1198,7 +1393,7 @@ function plHoverUpdate(clientX, clientY) {
   const wrapRect = wrap.getBoundingClientRect();
   const localX = clientX - wrapRect.left;
   const localY = clientY - wrapRect.top;
-  const ttW = 180, ttH = 110;
+  const ttW = 190, ttH = 160;
   let left = localX + 14; let top = localY - ttH / 2;
   if (left + ttW > wrapRect.width - 6) left = localX - ttW - 14;
   if (top < 6) top = 6;
@@ -1210,6 +1405,24 @@ function plHoverUpdate(clientX, clientY) {
   document.getElementById('ttFair').textContent = fmtMoney(fair);
   document.getElementById('ttSup').textContent  = fmtMoney(sup);
   document.getElementById('ttRes').textContent  = fmtMoney(res);
+  // Historická cena k najetému datu
+  const hp = nearestHistPoint(day);
+  const hpDot = document.getElementById('plHoverPrice');
+  const histRow = document.getElementById('ttHistRow');
+  const histDevRow = document.getElementById('ttHistDevRow');
+  const breachEl = document.getElementById('ttBreach');
+  if (hp) {
+    const hFair = powerLaw(hp.d);
+    const dev = (hp.c / hFair - 1) * 100;
+    document.getElementById('ttHist').textContent = fmtMoney(hp.c);
+    document.getElementById('ttHistDev').textContent = (dev >= 0 ? '+' : '') + dev.toFixed(0) + ' %';
+    histRow.style.display = ''; histDevRow.style.display = '';
+    breachEl.style.display = hp.l < hFair * PL_SUP_MUL ? '' : 'none';
+    if (hpDot) { hpDot.style.display = ''; hpDot.setAttribute('cx', plViewBox.xScale(hp.d)); hpDot.setAttribute('cy', plViewBox.yScale(hp.c)); }
+  } else {
+    histRow.style.display = 'none'; histDevRow.style.display = 'none'; breachEl.style.display = 'none';
+    if (hpDot) hpDot.style.display = 'none';
+  }
   // Dnešní cena - zobraz jen pro datum blízko dnešku (±14 dní)
   const todayDay = daysSinceGenesis(new Date());
   const nowRow = document.getElementById('ttNowRow');
@@ -1600,6 +1813,9 @@ async function updateLivePriceCard() {
     return;
   }
   livePriceState = data;
+  // Je-li otevřený Power Law, překresli ho s čerstvou cenou
+  const plPanel = document.getElementById('panel-powerlaw');
+  if (plPanel && plPanel.classList.contains('active')) { cachedPrice = null; renderPowerLaw(); }
   const { cur, change24h, athPrice, athDate } = data;
 
   const lpCur = document.getElementById('lpCurrent');
@@ -1717,6 +1933,10 @@ setInterval(() => { updateLivePriceCard(); }, PRICE_REFRESH_MS);
   initSnow();
   render();
   updateLivePriceCard();
+  // Tray menu „Aktualizovat" (volá lib.rs) – obnoví data bez znovunačtení stránky
+  window.__refreshAll = () => { cachedPrice = null; render(); renderHalving(); updateLivePriceCard().then(() => renderPowerLaw()); };
+  // Rust startuje s close_to_tray = true – pošli mu uložené nastavení
+  if (IS_TAURI) tauri('set_close_to_tray', { enabled: !!S.tray });
   // Notifikace permission (webový fallback, pokud Tauri neběží)
   if (!IS_TAURI && 'Notification' in window && Notification.permission === 'default') {
     // jemně: požádej až první interakci
